@@ -54,7 +54,7 @@ export function Footer() {
       </Container>
 
       <Container className="flex flex-col gap-5 border-t border-white/15 py-6 sm:flex-row sm:items-center sm:justify-between">
-        <p className="text-sm text-white/70">© 2026 Yerba Libre. Todos los derechos reservados.</p>
+        <p className="text-sm text-white/70">© 2026 JLGazano. Todos los derechos reservados.</p>
         <div className="flex gap-3">
           {[Instagram, Music2, Youtube, Mail].map((Icon, index) => (
             <Link key={index} href="#" className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white transition hover:bg-white/20" aria-label="Red social">

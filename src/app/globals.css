@@ -2,9 +2,9 @@
 
 :root {
   --background: #f7f2ea;
-  --primary: #3d5a40;
+  --primary: #6c8e37;
   --secondary: #d8c4a6;
-  --accent: #b86f3a;
+  --accent: #6c8e37;
   --text: #1a1a1a;
   --muted: #777777;
   --white: #ffffff;
@@ -55,7 +55,7 @@ textarea {
 }
 
 .grain {
-  background-image: radial-gradient(rgba(61, 90, 64, 0.08) 1px, transparent 1px);
+  background-image: radial-gradient(rgba(108, 142, 55, 0.08) 1px, transparent 1px);
   background-size: 18px 18px;
 }
 
@@ -64,5 +64,5 @@ textarea {
 }
 
 .image-shadow {
-  box-shadow: 0 24px 70px rgba(61, 90, 64, 0.18);
+  box-shadow: 0 24px 70px rgba(108, 142, 55, 0.18);
 }

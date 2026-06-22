@@ -23,7 +23,7 @@ export function Header() {
     <header className="sticky top-0 z-50 border-b border-primary/10 bg-white/90 backdrop-blur-xl">
       <Container className="relative flex h-20 items-center justify-between gap-4">
         <Link href="/" className="flex items-center gap-3" aria-label="Inicio">
-          <Image src="/logo.svg" alt="Yerba Libre" width={180} height={52} priority className="h-12 w-auto" />
+          <Image src="/logo.webp" alt="Amate toda la vida" width={640} height={196} priority className="h-11 w-auto max-w-[185px] sm:h-12 sm:max-w-[230px] lg:h-14 lg:max-w-[260px]" />
         </Link>
 
         <nav className="hidden items-center gap-8 text-sm font-semibold text-text/80 lg:flex">

@@ -43,7 +43,7 @@ export const products: Product[] = [
     id: "mate-bombilla",
     name: "Mate + Bombilla",
     price: "$18.900",
-    image: "https://images.unsplash.com/photo-1613053027045-0f8a0ec168e9?auto=format&fit=crop&w=900&q=80",
+    image: "https://images.unsplash.com/photo-1571934811356-5cc061b6821f?auto=format&fit=crop&w=900&q=80",
     description: "Kit esencial para empezar con una cebada pareja."
   },
   {

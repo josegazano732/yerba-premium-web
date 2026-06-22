@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+:root {
+  --background: #f7f2ea;
+  --primary: #3d5a40;
+  --secondary: #d8c4a6;
+  --accent: #b86f3a;
+  --text: #1a1a1a;
+  --muted: #777777;
+  --white: #ffffff;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-primary: var(--primary);
+  --color-secondary: var(--secondary);
+  --color-accent: var(--accent);
+  --color-text: var(--text);
+  --color-muted: var(--muted);
+  --color-white: var(--white);
+  --font-sans: var(--font-inter);
+  --font-serif: var(--font-playfair);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--text);
+  font-family: var(--font-inter), Arial, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+::selection {
+  background: var(--secondary);
+  color: var(--text);
+}
+
+.grain {
+  background-image: radial-gradient(rgba(61, 90, 64, 0.08) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+
+.section-pad {
+  padding-block: clamp(4rem, 8vw, 7rem);
+}
+
+.image-shadow {
+  box-shadow: 0 24px 70px rgba(61, 90, 64, 0.18);
+}

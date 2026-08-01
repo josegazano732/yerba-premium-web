@@ -12,7 +12,7 @@ export default function ContactPage() {
           <p className="text-sm font-bold uppercase text-accent">Contacto</p>
           <h1 className="mt-3 font-serif text-5xl font-bold text-text">Hablemos de mate</h1>
           <div className="mt-8 space-y-4 text-muted">
-            <p className="flex items-center gap-3"><Mail size={18} /> hola@yerbalibre.com</p>
+            <p className="flex items-center gap-3"><Mail size={18} /> matetierraa@gmail.com</p>
             <p className="flex items-center gap-3"><Phone size={18} /> <a href={`https://wa.me/${site.whatsappNumber}`} target="_blank" rel="noopener noreferrer" className="hover:text-primary">{site.whatsappDisplay}</a></p>
             <p className="flex items-center gap-3"><MapPin size={18} /> Misiones, Argentina</p>
           </div>

@@ -6,7 +6,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import { ChevronLeft, ChevronRight, Leaf, ShieldCheck, Truck } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
-import { useCatalog } from "@/lib/useCatalog";
 import { cn } from "@/lib/utils";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
@@ -33,7 +32,6 @@ const trustItems = [
 ];
 
 export function HeroBanner() {
-  const { products, categories } = useCatalog();
   const [slides, setSlides] = useState<string[]>([]);
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -103,9 +101,6 @@ export function HeroBanner() {
             transition={{ duration: 0.7, ease: "easeOut" }}
             className="max-w-2xl"
           >
-            <span className="inline-flex rounded-full bg-white/15 px-4 py-1.5 text-xs font-bold uppercase tracking-wide text-white backdrop-blur">
-              Tienda de mate y yerba premium
-            </span>
             <h1 className="sr-only">Tienda de mates, termos, bombillas, yerbas y accesorios materos</h1>
             <div className="mt-7 flex flex-wrap items-center gap-3">
               <Button href="/productos" className="px-7 py-3 text-base">
@@ -157,19 +152,6 @@ export function HeroBanner() {
       </div>
 
       <Container className="flex flex-wrap items-center justify-between gap-x-8 gap-y-4 py-5">
-        <dl className="flex items-center gap-8">
-          <div>
-            <dt className="sr-only">Productos disponibles</dt>
-            <dd className="font-serif text-2xl text-primary">{products.length > 0 ? `${products.length}+` : "--"}</dd>
-            <p className="text-xs uppercase tracking-wide text-muted">Productos</p>
-          </div>
-          <div>
-            <dt className="sr-only">Categorias</dt>
-            <dd className="font-serif text-2xl text-primary">{categories.length || "--"}</dd>
-            <p className="text-xs uppercase tracking-wide text-muted">Categorias</p>
-          </div>
-        </dl>
-
         <ul className="flex flex-wrap gap-x-6 gap-y-2">
           {trustItems.map((item) => (
             <li key={item.label} className="flex items-center gap-2 text-sm font-medium text-forest">

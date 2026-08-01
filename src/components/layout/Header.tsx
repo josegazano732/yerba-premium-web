@@ -7,7 +7,9 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Container } from "@/components/ui/Container";
+import { FREE_SHIPPING_THRESHOLD } from "@/lib/shipping";
 import { useCatalog } from "@/lib/useCatalog";
+import { formatPrice } from "@/lib/utils";
 import { MobileMenu } from "./MobileMenu";
 
 const navItems = [
@@ -55,16 +57,14 @@ const visualFallbackCards = [
 
 const announcements = [
   "Envios a todo el pais",
-  "Stock real actualizado todos los dias",
-  "Cambios sin cargo dentro de los 7 dias",
-  "Asesoramiento antes y despues de tu compra"
+  `Envio gratis superando los ${formatPrice(FREE_SHIPPING_THRESHOLD)}`
 ];
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [isProductsOpen, setIsProductsOpen] = useState(false);
   const productsMenuRef = useRef<HTMLDivElement | null>(null);
-  const announcementLoop = [...announcements, ...announcements, ...announcements];
+  const announcementLoop = Array.from({ length: 6 }).flatMap(() => announcements);
   const { products, categories } = useCatalog();
 
   const rankedCategories = useMemo(() => {
@@ -139,7 +139,7 @@ export function Header() {
         <div className="grain pointer-events-none absolute inset-0 opacity-70" aria-hidden />
         <motion.div
           className="relative flex w-max items-center gap-12 py-2.5"
-          animate={{ x: ["0%", "-33.333%"] }}
+          animate={{ x: ["0%", "-50%"] }}
           transition={{ duration: 32, ease: "linear", repeat: Infinity }}
         >
           {announcementLoop.map((message, index) => (
@@ -204,9 +204,6 @@ export function Header() {
                       <div className="grid content-start gap-6">
                         <div>
                           <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-primary">Productos</p>
-                          <p className="mt-3 max-w-sm text-sm leading-6 text-muted">
-                            Explorá la tienda por familia: mates, termos y bombillas listos para tu rutina.
-                          </p>
                         </div>
 
                         <div className="grid gap-2">

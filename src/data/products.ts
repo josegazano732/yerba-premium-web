@@ -5,6 +5,7 @@ export type Product = {
   compareAtPrice?: number;
   discount?: string;
   image: string;
+  images?: string[];
   description: string;
   category: string;
   weight?: string;
@@ -30,12 +31,16 @@ const fallbackImage = "https://images.unsplash.com/photo-1571934811356-5cc061b68
 export function mapProductDetails(row: ProductDetailsRow): Product | null {
   if (!row.id || !row.name || row.price === null) return null;
 
+  const image = row.image || row.image_urls?.[0] || fallbackImage;
+  const gallery = [image, ...(row.image_urls ?? [])].filter((source, index, all) => Boolean(source) && all.indexOf(source) === index);
+
   return {
     id: row.id,
     name: row.name,
     description: row.description ?? "Producto seleccionado de nuestra tienda.",
     price: Number(row.price),
-    image: row.image || row.image_urls?.[0] || fallbackImage,
+    image,
+    images: gallery,
     category: row.category_name ?? "Otros",
     weight: row.unit_of_measure ?? undefined,
     stock: Number(row.stock ?? 0),

@@ -8,10 +8,10 @@ const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
 const cormorant = Cormorant_Garamond({ subsets: ["latin"], variable: "--font-cormorant", weight: ["500", "600", "700"] });
 
 export const metadata: Metadata = {
-  title: "Yerba Mate Premium",
+  title: "Mate tierra Web",
   description: "Yerba suave de Misiones.",
   openGraph: {
-    title: "Yerba Mate Premium",
+    title: "Mate tierra Web",
     description: "Yerba suave de Misiones.",
     type: "website",
     locale: "es_AR"

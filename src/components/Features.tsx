@@ -1,36 +1,43 @@
-import { Leaf, ShieldCheck, Sprout } from "lucide-react";
+import { CreditCard, PackageCheck, ShieldCheck, Truck } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 
 const features = [
   {
-    icon: Sprout,
-    title: "Origen cuidado",
-    description: "Yerba cultivada en Misiones con seleccion de hoja madura y perfil aromatico limpio."
+    icon: Truck,
+    title: "Envio a todo el pais",
+    description: "Despachamos en 24 hs habiles y seguis tu pedido hasta la puerta de tu casa."
+  },
+  {
+    icon: CreditCard,
+    title: "Pagas como quieras",
+    description: "Tarjeta en cuotas, transferencia o efectivo. Precios claros, sin sorpresas al final."
+  },
+  {
+    icon: PackageCheck,
+    title: "Stock real online",
+    description: "Lo que ves publicado esta disponible: el catalogo se actualiza con nuestro deposito."
   },
   {
     icon: ShieldCheck,
-    title: "Suavidad diaria",
-    description: "Estacionamiento natural para una cebada amable, estable y con baja presencia de polvo."
-  },
-  {
-    icon: Leaf,
-    title: "Ritual premium",
-    description: "Producto artesanal, packaging sobrio y una experiencia lista para vender online."
+    title: "Compra protegida",
+    description: "Cambios sin vueltas dentro de los 7 dias y asesoramiento antes y despues de comprar."
   }
 ];
 
 export function Features() {
   return (
-    <section className="section-pad bg-white">
+    <section className="border-y border-primary/10 bg-white py-12">
       <Container>
-        <div className="grid gap-5 md:grid-cols-3">
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
           {features.map((feature) => (
-            <article key={feature.title} className="rounded-[8px] border border-primary/10 bg-background p-6">
-              <div className="grid h-12 w-12 place-items-center rounded-full bg-primary text-white">
-                <feature.icon size={22} />
+            <article key={feature.title} className="flex gap-4">
+              <div className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-secondary/50 text-primary">
+                <feature.icon size={20} />
               </div>
-              <h2 className="mt-6 font-serif text-2xl font-semibold text-text">{feature.title}</h2>
-              <p className="mt-3 text-sm leading-6 text-muted">{feature.description}</p>
+              <div>
+                <h2 className="text-sm font-bold uppercase tracking-wide text-[#20341d]">{feature.title}</h2>
+                <p className="mt-2 text-sm leading-6 text-muted">{feature.description}</p>
+              </div>
             </article>
           ))}
         </div>

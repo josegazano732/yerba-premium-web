@@ -5,8 +5,11 @@
   --primary: #6c8e37;
   --secondary: #d8c4a6;
   --accent: #6c8e37;
-  --text: #1a1a1a;
-  --muted: #777777;
+  --cta: #6c8e37;
+  --cta-hover: #5b7a2c;
+  --forest: #20341d;
+  --text: #2d3328;
+  --muted: #63685c;
   --white: #ffffff;
 }
 
@@ -15,11 +18,14 @@
   --color-primary: var(--primary);
   --color-secondary: var(--secondary);
   --color-accent: var(--accent);
+  --color-cta: var(--cta);
+  --color-cta-hover: var(--cta-hover);
+  --color-forest: var(--forest);
   --color-text: var(--text);
   --color-muted: var(--muted);
   --color-white: var(--white);
-  --font-sans: var(--font-inter);
-  --font-serif: var(--font-playfair);
+  --font-sans: var(--font-manrope);
+  --font-serif: var(--font-cormorant);
 }
 
 * {
@@ -34,19 +40,22 @@ body {
   margin: 0;
   background: var(--background);
   color: var(--text);
-  font-family: var(--font-inter), Arial, sans-serif;
+  font-family: var(--font-manrope), sans-serif;
 }
 
-a {
-  color: inherit;
-  text-decoration: none;
-}
+/* Debe ir en @layer base: sin capa, `a { color: inherit }` gana sobre utilidades como text-white. */
+@layer base {
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
 }
 
 ::selection {
@@ -65,4 +74,27 @@ textarea {
 
 .image-shadow {
   box-shadow: 0 24px 70px rgba(108, 142, 55, 0.18);
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.admin-input {
+  min-height: 3rem;
+  width: 100%;
+  border: 1px solid #cfd4c9;
+  background: #fff;
+  padding-inline: 0.875rem;
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.admin-input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(108, 142, 55, 0.12);
 }

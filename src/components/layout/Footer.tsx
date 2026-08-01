@@ -3,11 +3,19 @@
 import { Instagram, Mail, Music2, Youtube } from "lucide-react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
+import { site } from "@/data/site";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { Input } from "@/components/ui/Input";
 
 type NewsletterForm = { email: string };
+
+const socials = [
+  { Icon: Instagram, href: site.instagramUrl, label: "Instagram", external: true },
+  { Icon: Music2, href: "#", label: "TikTok", external: false },
+  { Icon: Youtube, href: "#", label: "YouTube", external: false },
+  { Icon: Mail, href: "/contacto", label: "Contacto", external: false }
+];
 
 const columns = [
   { title: "Comprar", links: ["Productos", "Donde Comprar", "Mayoristas"] },
@@ -56,8 +64,15 @@ export function Footer() {
       <Container className="flex flex-col gap-5 border-t border-white/15 py-6 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-white/70">© 2026 JLGazano. Todos los derechos reservados.</p>
         <div className="flex gap-3">
-          {[Instagram, Music2, Youtube, Mail].map((Icon, index) => (
-            <Link key={index} href="#" className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white transition hover:bg-white/20" aria-label="Red social">
+          {socials.map(({ Icon, href, label, external }) => (
+            <Link
+              key={label}
+              href={href}
+              target={external ? "_blank" : undefined}
+              rel={external ? "noopener noreferrer" : undefined}
+              className="grid h-10 w-10 place-items-center rounded-full bg-white/10 text-white transition hover:bg-white/20"
+              aria-label={label}
+            >
               <Icon size={18} />
             </Link>
           ))}

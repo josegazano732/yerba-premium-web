@@ -1,11 +1,11 @@
-import { Leaf, PackageCheck, Sparkles, Timer } from "lucide-react";
+import { Check, PackageCheck, ShieldCheck, Sparkles } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 
 const items = [
-  { icon: Leaf, title: "Cultivada en Misiones", text: "Hojas de origen seleccionado y trazabilidad clara." },
-  { icon: Timer, title: "12 meses natural", text: "Estacionamiento paciente para un sabor redondo." },
-  { icon: Sparkles, title: "Menos polvo", text: "Molienda equilibrada para cebadas mas limpias." },
-  { icon: PackageCheck, title: "Sabor duradero", text: "Perfil suave que sostiene varias rondas." }
+  { icon: Check, title: "Probado antes de vender", text: "Cada mate, termo y bombilla pasa por nuestras manos antes de entrar al catalogo." },
+  { icon: Sparkles, title: "Materiales que duran", text: "Calabaza curada, cuero genuino y acero inoxidable, sin plasticos que se rompen a la semana." },
+  { icon: PackageCheck, title: "Combos listos para regalar", text: "Mate, bombilla, termo y yerbera armados juntos, con presentacion cuidada." },
+  { icon: ShieldCheck, title: "Te acompanamos despues", text: "Te contamos como curar el mate y cambiamos lo que no te convenza dentro de los 7 dias." }
 ];
 
 export function Sustainability() {
@@ -13,8 +13,8 @@ export function Sustainability() {
     <section className="section-pad bg-secondary/35">
       <Container>
         <div className="mb-10 max-w-2xl">
-          <p className="text-sm font-bold uppercase text-accent">Diferenciales</p>
-          <h2 className="mt-3 font-serif text-4xl font-semibold text-text sm:text-5xl">Natural desde el origen</h2>
+          <p className="text-sm font-bold uppercase text-accent">Por que comprarnos</p>
+          <h2 className="mt-3 font-serif text-4xl font-semibold text-text sm:text-5xl">Equipo matero elegido a mano</h2>
         </div>
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {items.map((item) => (

@@ -27,10 +27,8 @@ jobs:
 
       - run: npm ci
 
+      # Las claves publicas se leen de .env.production
       - name: Build static export
-        env:
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: npm run build
 
       # Evita que GitHub Pages ignore la carpeta _next

@@ -81,9 +81,6 @@ export function FeaturedProducts() {
           <div className="max-w-xl">
             <Badge>Los mas elegidos</Badge>
             <h2 className="mt-4 font-serif text-3xl text-[#20341d] sm:text-4xl">Favoritos de la comunidad matera</h2>
-            <p className="mt-3 text-base text-muted">
-              Seleccion actualizada con lo que mas sale de nuestro deposito. Stock real, listo para despachar.
-            </p>
           </div>
 
           <div className="flex items-center gap-3">

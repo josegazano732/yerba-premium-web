@@ -2,10 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useMemo } from "react";
-import { motion } from "framer-motion";
-import { ArrowRight } from "lucide-react";
-import { Badge } from "@/components/ui/Badge";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { useCatalog } from "@/lib/useCatalog";
 
@@ -13,6 +11,9 @@ const CATEGORY_ORDER = ["Mates", "Termos", "Bombillas", "Yerberas", "Materas", "
 
 export function CategoryShowcase() {
   const { products, categories, isLoading } = useCatalog();
+  const trackRef = useRef<HTMLDivElement>(null);
+  const [pageCount, setPageCount] = useState(1);
+  const [activePage, setActivePage] = useState(0);
 
   const cards = useMemo(() => {
     const counts = products.reduce<Record<string, number>>((accumulator, product) => {
@@ -32,68 +33,117 @@ export function CategoryShowcase() {
         const rankB = CATEGORY_ORDER.indexOf(second.name);
         return (rankA === -1 ? CATEGORY_ORDER.length : rankA) - (rankB === -1 ? CATEGORY_ORDER.length : rankB);
       })
-      .slice(0, 8);
+      .slice(0, 12);
   }, [categories, products]);
+
+  const syncPagination = useCallback(() => {
+    const track = trackRef.current;
+    if (!track) return;
+    const pages = Math.max(1, Math.round(track.scrollWidth / Math.max(track.clientWidth, 1)));
+    setPageCount(pages);
+    setActivePage(Math.min(pages - 1, Math.round(track.scrollLeft / Math.max(track.clientWidth, 1))));
+  }, []);
+
+  useEffect(() => {
+    syncPagination();
+    window.addEventListener("resize", syncPagination);
+    return () => window.removeEventListener("resize", syncPagination);
+  }, [cards.length, syncPagination]);
+
+  const scrollByCard = (direction: 1 | -1) => {
+    const track = trackRef.current;
+    if (!track) return;
+    const card = track.firstElementChild as HTMLElement | null;
+    const step = card ? card.offsetWidth + 16 : track.clientWidth * 0.8;
+    track.scrollBy({ left: step * direction, behavior: "smooth" });
+  };
+
+  const scrollToPage = (page: number) => {
+    const track = trackRef.current;
+    if (!track) return;
+    track.scrollTo({ left: page * track.clientWidth, behavior: "smooth" });
+  };
 
   if (!isLoading && cards.length === 0) return null;
 
   return (
     <section className="section-pad bg-background">
       <Container>
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <div className="max-w-xl">
-            <Badge>Explora por categoria</Badge>
-            <h2 className="mt-4 font-serif text-3xl text-[#20341d] sm:text-4xl">
-              Encontra exactamente lo que tu mate necesita
-            </h2>
-            <p className="mt-3 text-base text-muted">
-              Desde el mate de todos los dias hasta el termo que aguanta la jornada completa.
-            </p>
-          </div>
-          <Link
-            href="/productos"
-            className="inline-flex items-center gap-2 text-sm font-semibold text-primary transition hover:gap-3"
+        <h2 className="text-center font-serif text-3xl font-semibold text-[#20341d] sm:text-4xl">
+          Explora por categoria
+        </h2>
+
+        <div className="relative mt-10">
+          <button
+            type="button"
+            onClick={() => scrollByCard(-1)}
+            aria-label="Ver categorias anteriores"
+            className="absolute -left-1 top-[42%] z-10 hidden h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-[#20341d] text-white shadow-md transition hover:bg-primary focus:outline-none focus:ring-2 focus:ring-accent sm:grid lg:-left-4"
           >
-            Ver todo el catalogo
-            <ArrowRight className="h-4 w-4" />
-          </Link>
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+
+          <div
+            ref={trackRef}
+            onScroll={syncPagination}
+            className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2"
+          >
+            {isLoading
+              ? Array.from({ length: 5 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className="h-[19rem] w-[60vw] shrink-0 animate-pulse rounded-[8px] bg-secondary/40 sm:w-[15rem]"
+                  />
+                ))
+              : cards.map((card) => (
+                  <Link
+                    key={card.name}
+                    href={`/productos#${encodeURIComponent(card.name)}`}
+                    className="group flex w-[60vw] shrink-0 snap-start flex-col overflow-hidden rounded-[8px] bg-white/70 ring-1 ring-primary/10 transition duration-300 hover:ring-primary/40 focus:outline-none focus:ring-2 focus:ring-accent sm:w-[15rem]"
+                  >
+                    <div className="relative aspect-square overflow-hidden bg-secondary/20">
+                      <Image
+                        src={card.image}
+                        alt={card.name}
+                        fill
+                        sizes="(max-width: 640px) 60vw, 240px"
+                        className="object-cover transition duration-700 group-hover:scale-110"
+                      />
+                    </div>
+                    <div className="border-t border-primary/10 px-4 py-4 text-center">
+                      <p className="font-serif text-lg text-[#20341d]">{card.name}</p>
+                      <p className="mt-1 text-xs font-medium uppercase tracking-wide text-muted">
+                        {card.count > 0 ? `${card.count} productos` : "Ver seleccion"}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+          </div>
+
+          <button
+            type="button"
+            onClick={() => scrollByCard(1)}
+            aria-label="Ver categorias siguientes"
+            className="absolute -right-1 top-[42%] z-10 hidden h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-[#20341d] text-white shadow-md transition hover:bg-primary focus:outline-none focus:ring-2 focus:ring-accent sm:grid lg:-right-4"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
         </div>
 
-        <div className="mt-10 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-          {isLoading
-            ? Array.from({ length: 8 }).map((_, index) => (
-                <div key={index} className="aspect-[4/5] animate-pulse rounded-3xl bg-secondary/40" />
-              ))
-            : cards.map((card, index) => (
-                <motion.div
-                  key={card.name}
-                  initial={{ opacity: 0, y: 24 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true, margin: "-60px" }}
-                  transition={{ duration: 0.5, delay: Math.min(index * 0.05, 0.3) }}
-                >
-                  <Link
-                    href={`/productos#${encodeURIComponent(card.name)}`}
-                    className="group relative flex aspect-[4/5] overflow-hidden rounded-3xl bg-secondary/30 ring-1 ring-primary/10 transition duration-300 hover:ring-primary/40 focus:outline-none focus:ring-2 focus:ring-accent"
-                  >
-                    <Image
-                      src={card.image}
-                      alt={card.name}
-                      fill
-                      sizes="(max-width: 640px) 45vw, (max-width: 1024px) 30vw, 22vw"
-                      className="object-cover transition duration-700 group-hover:scale-110"
-                    />
-                    <span className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/15 to-transparent" />
-                    <span className="relative mt-auto w-full p-4">
-                      <span className="block font-serif text-xl text-white">{card.name}</span>
-                      {card.count > 0 && (
-                        <span className="mt-1 block text-xs font-medium text-white/80">{card.count} productos</span>
-                      )}
-                    </span>
-                  </Link>
-                </motion.div>
-              ))}
-        </div>
+        {pageCount > 1 && (
+          <div className="mt-8 flex justify-center gap-2">
+            {Array.from({ length: pageCount }).map((_, page) => (
+              <button
+                key={page}
+                type="button"
+                onClick={() => scrollToPage(page)}
+                aria-label={`Ir al grupo ${page + 1}`}
+                aria-current={page === activePage}
+                className={`h-2 w-2 rounded-full transition ${page === activePage ? "bg-[#20341d]" : "bg-primary/25"}`}
+              />
+            ))}
+          </div>
+        )}
       </Container>
     </section>
   );

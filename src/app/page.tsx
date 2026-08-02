@@ -1,12 +1,9 @@
 import { BrandStory } from "@/components/brand/BrandStory";
-import { ProcessSection } from "@/components/brand/ProcessSection";
-import { Sustainability } from "@/components/brand/Sustainability";
-import { CategoryShowcase } from "@/components/home/CategoryShowcase";
 import { HeroBanner } from "@/components/home/HeroBanner";
 import { ProductMarquee } from "@/components/home/ProductMarquee";
+import { PromoBanner } from "@/components/home/PromoBanner";
 import { StoreLocator } from "@/components/locations/StoreLocator";
 import { FeaturedProducts } from "@/components/products/FeaturedProducts";
-import { Features } from "@/components/Features";
 import { site } from "@/data/site";
 
 const storeSchema = {
@@ -32,13 +29,10 @@ export default function Home() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(storeSchema) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }} />
       <HeroBanner />
-      <Features />
-      <CategoryShowcase />
       <FeaturedProducts />
+      <PromoBanner />
       <ProductMarquee />
       <BrandStory />
-      <Sustainability />
-      <ProcessSection />
       <StoreLocator />
     </main>
   );

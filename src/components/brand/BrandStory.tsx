@@ -69,17 +69,6 @@ export function BrandStory() {
                 }, con reposicion permanente de lo que mas sale.`}
           </p>
 
-          {topCategories.length > 0 && (
-            <ul className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-              {topCategories.map((category) => (
-                <li key={category.name} className="rounded-2xl bg-background p-4 ring-1 ring-primary/10">
-                  <p className="font-serif text-2xl text-primary">{category.count}</p>
-                  <p className="mt-1 text-xs font-semibold uppercase tracking-wide text-muted">{category.name}</p>
-                </li>
-              ))}
-            </ul>
-          )}
-
           <Button href="/productos" className="mt-8 px-7 py-3 text-base">
             Ver el surtido completo
           </Button>

@@ -3,7 +3,7 @@ import { Container } from "@/components/ui/Container";
 const steps = [
   { title: "Elegis", text: "Navegas el catalogo por categoria y sumas al carrito lo que necesites para tu ronda." },
   { title: "Confirmamos", text: "Te escribimos para coordinar el pago y confirmar el stock de cada producto." },
-  { title: "Preparamos", text: "Revisamos, curamos si hace falta y embalamos todo para que llegue intacto." },
+  { title: "Preparamos", text: "Preparamos todo con cuidado para que llegue a destino en perfectas condiciones." },
   { title: "Recibis", text: "Despachamos en 24 hs habiles a todo el pais y te pasamos el seguimiento." }
 ];
 
@@ -13,7 +13,7 @@ export function ProcessSection() {
       <Container>
         <div className="mb-12 max-w-2xl">
           <p className="text-sm font-bold uppercase text-accent">Como comprar</p>
-          <h2 className="mt-3 font-serif text-4xl font-semibold text-text sm:text-5xl">De nuestro deposito a tu mesa</h2>
+          <h2 className="mt-3 font-serif text-4xl font-semibold text-text sm:text-5xl">De nuestro deposito a tus manos</h2>
         </div>
         <div className="grid gap-5 lg:grid-cols-4 lg:gap-0">
           {steps.map((step, index) => (

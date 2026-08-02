@@ -7,6 +7,7 @@ import { ChangeEvent, FormEvent, useDeferredValue, useEffect, useState } from "r
 import type { Session } from "@supabase/supabase-js";
 import { AdminBranding } from "@/components/admin/AdminBranding";
 import { AdminHeroBanner } from "@/components/admin/AdminHeroBanner";
+import { promoBannerPath, promoBannerSlots, promoBannerUrl } from "@/components/home/PromoBanner";
 import { supabase } from "@/lib/supabase";
 
 type Category = {
@@ -279,6 +280,17 @@ export function ProductAdmin() {
         <AdminBranding />
 
         <AdminHeroBanner />
+
+        <AdminHeroBanner
+          eyebrow="Promociones"
+          title="Banner promocional"
+          description="Imagen apaisada que se muestra debajo de 'Los mas elegidos' en el inicio y enlaza al catálogo. Si no cargás ninguna, la sección no aparece."
+          slots={promoBannerSlots}
+          pathFor={promoBannerPath}
+          urlFor={promoBannerUrl}
+          slotLabel="Banner promocional"
+          hint="Recomendado: 1400 x 770 px, PNG/JPG/WebP, máximo 6 MB."
+        />
 
         <section className="mt-6 border border-[#d9dcd3] bg-white">
           <div className="flex flex-col gap-4 border-b border-[#e0e2dc] p-4 sm:flex-row sm:items-center sm:justify-between">

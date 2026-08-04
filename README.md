@@ -10,6 +10,8 @@ npm run build
 npm run start
 ```
 
+> El proyecto usa `output: "export"`, por lo que `next start` no aplica: `npm run start` sirve la carpeta estatica `out` generada por `npm run build`.
+
 ## Estructura
 
 - `src/app`: rutas principales.

@@ -3,12 +3,14 @@
 import { motion } from "framer-motion";
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
+import { site } from "@/data/site";
 
 const navItems = [
-  { href: "/productos", label: "Productos" },
-  { href: "/donde-comprar", label: "Donde Comprar" },
-  { href: "/sobre-nosotros", label: "Sobre Nosotros" },
-  { href: "/contacto", label: "Contacto" }
+  { href: "/productos", label: "Productos", external: false },
+  { href: "/catalogos", label: "Catalogos", external: false },
+  { href: "/donde-comprar", label: "Donde Comprar", external: false },
+  { href: "/sobre-nosotros", label: "Sobre Nosotros", external: false },
+  { href: `https://wa.me/${site.whatsappNumber}`, label: "Contacto", external: true }
 ];
 
 export function MobileMenu({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
@@ -21,7 +23,14 @@ export function MobileMenu({ onNavigate }: Readonly<{ onNavigate: () => void }>)
     >
       <nav className="grid gap-1">
         {navItems.map((item) => (
-          <Link key={item.href} href={item.href} onClick={onNavigate} className="rounded-md px-3 py-3 text-sm font-semibold text-text hover:bg-secondary/35">
+          <Link
+            key={item.href}
+            href={item.href}
+            target={item.external ? "_blank" : undefined}
+            rel={item.external ? "noopener noreferrer" : undefined}
+            onClick={onNavigate}
+            className="rounded-md px-3 py-3 text-sm font-semibold text-text hover:bg-secondary/35"
+          >
             {item.label}
           </Link>
         ))}

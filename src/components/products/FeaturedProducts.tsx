@@ -9,8 +9,19 @@ import { featuredProducts as fallbackFeatured, Product } from "@/data/products";
 import { useCatalog } from "@/lib/useCatalog";
 import { ProductCard } from "./ProductCard";
 
-const FEATURED_PRIORITY = ["Mates", "Combos Ofertas", "Termos", "Bombillas"];
+const FEATURED_PRIORITY = ["Mates", "Termos", "Bombillas", "Materas"];
+const EXCLUDED_CATEGORY_KEYWORDS = ["pequen", "combo", "hierba"];
 const AUTOPLAY_MS = 5000;
+
+/** Compara sin acentos ni mayusculas para tolerar variantes de nombre en el catalogo. */
+function isExcludedCategory(category: string) {
+  const normalized = category
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+
+  return EXCLUDED_CATEGORY_KEYWORDS.some((keyword) => normalized.includes(keyword));
+}
 
 export function FeaturedProducts() {
   const { products, isLoading } = useCatalog();
@@ -18,10 +29,11 @@ export function FeaturedProducts() {
   const [isPaused, setIsPaused] = useState(false);
 
   const selection = useMemo<Product[]>(() => {
-    if (products.length === 0) return fallbackFeatured;
+    const allowed = products.filter((product) => !isExcludedCategory(product.category));
+    if (allowed.length === 0) return fallbackFeatured.filter((product) => !isExcludedCategory(product.category));
 
-    const inStock = products.filter((product) => product.stock > 0);
-    const pool = inStock.length > 0 ? inStock : products;
+    const inStock = allowed.filter((product) => product.stock > 0);
+    const pool = inStock.length > 0 ? inStock : allowed;
 
     const ranked = [...pool].sort((first, second) => {
       const featuredDiff = Number(second.featured) - Number(first.featured);

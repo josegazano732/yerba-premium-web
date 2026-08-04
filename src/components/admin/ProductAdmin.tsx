@@ -24,6 +24,7 @@ type AdminProduct = {
   image_urls: string[] | null;
   category_id: string | null;
   category_name: string | null;
+  unit_of_measure: string | null;
   stock: number | string | null;
   seasonal: boolean | null;
   cost: number | string | null;
@@ -36,17 +37,24 @@ type ProductForm = {
   description: string;
   price: string;
   categoryId: string;
+  unitOfMeasure: string;
   stock: string;
   seasonal: boolean;
   cost: string;
   markupPercentage: string;
 };
 
+const UNIT_OPTIONS = [
+  { value: "unidad", label: "Unidad" },
+  { value: "gramos", label: "Gramos" }
+];
+
 const emptyForm: ProductForm = {
   name: "",
   description: "",
   price: "",
   categoryId: "",
+  unitOfMeasure: UNIT_OPTIONS[0].value,
   stock: "0",
   seasonal: false,
   cost: "",
@@ -102,7 +110,7 @@ export function ProductAdmin() {
     setLoading(true);
     setMessage("");
     const [productsResult, categoriesResult] = await Promise.all([
-      supabase.from("product_details").select("id,name,description,price,image,image_urls,category_id,category_name,stock,seasonal,cost,markup_percentage,updated_at").order("updated_at", { ascending: false }),
+      supabase.from("product_details").select("id,name,description,price,image,image_urls,category_id,category_name,unit_of_measure,stock,seasonal,cost,markup_percentage,updated_at").order("updated_at", { ascending: false }),
       supabase.from("product_categories").select("id,name").eq("is_active", true).order("display_order")
     ]);
     setLoading(false);
@@ -139,6 +147,7 @@ export function ProductAdmin() {
       description: product.description ?? "",
       price: String(product.price ?? ""),
       categoryId: product.category_id ?? categories[0]?.id ?? "",
+      unitOfMeasure: normalizeUnit(product.unit_of_measure),
       stock: String(product.stock ?? 0),
       seasonal: Boolean(product.seasonal),
       cost: String(product.cost ?? ""),
@@ -200,6 +209,7 @@ export function ProductAdmin() {
       price: Number(form.price),
       image: imageUrls[0],
       category_id: form.categoryId,
+      unit_of_measure: form.unitOfMeasure,
       stock: Number(form.stock),
       seasonal: form.seasonal,
       cost: form.cost ? Number(form.cost) : null,
@@ -312,7 +322,7 @@ export function ProductAdmin() {
       </div>
 
       <AnimatePresence>
-        {isFormOpen ? <><motion.button type="button" aria-label="Cerrar formulario" onClick={() => setIsFormOpen(false)} className="fixed inset-0 z-[60] cursor-default bg-[#11180f]/50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} /><motion.aside role="dialog" aria-modal="true" aria-label={editingProduct ? "Editar producto" : "Crear producto"} initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 250 }} className="fixed inset-y-0 right-0 z-[70] w-full max-w-xl overflow-y-auto bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-[#dedfd9] px-5 py-5 sm:px-7"><div><p className="text-xs font-bold uppercase tracking-wider text-primary">Catálogo</p><h2 className="font-serif text-3xl font-semibold">{editingProduct ? "Editar producto" : "Nuevo producto"}</h2></div><button type="button" onClick={() => setIsFormOpen(false)} className="grid h-10 w-10 place-items-center border border-[#d7d9d2]" aria-label="Cerrar"><X size={18} /></button></div><form onSubmit={saveProduct} className="space-y-5 p-5 sm:p-7"><AdminField label="Nombre"><input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className="admin-input" /></AdminField><AdminField label="Descripción"><textarea required value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} className="admin-input min-h-28 py-3" /></AdminField><div className="grid gap-4 sm:grid-cols-2"><AdminField label="Precio"><input required min="0" step="0.01" type="number" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} className="admin-input" /></AdminField><AdminField label="Stock"><input required min="0" step="0.01" type="number" value={form.stock} onChange={(event) => setForm({ ...form, stock: event.target.value })} className="admin-input" /></AdminField></div><AdminField label="Categoría"><select required value={form.categoryId} onChange={(event) => setForm({ ...form, categoryId: event.target.value })} className="admin-input">{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></AdminField><ProductImagePicker files={productImages} existingImages={existingImages} onChange={setProductImages} /><div className="grid gap-4 sm:grid-cols-2"><AdminField label="Costo (opcional)"><input min="0" step="0.01" type="number" value={form.cost} onChange={(event) => setForm({ ...form, cost: event.target.value })} className="admin-input" /></AdminField><AdminField label="Margen % (opcional)"><input step="0.01" type="number" value={form.markupPercentage} onChange={(event) => setForm({ ...form, markupPercentage: event.target.value })} className="admin-input" /></AdminField></div><label className="flex items-center gap-3 border border-[#d7d9d2] p-4 text-sm font-bold"><input type="checkbox" checked={form.seasonal} onChange={(event) => setForm({ ...form, seasonal: event.target.checked })} className="h-4 w-4 accent-primary" /> Producto de temporada</label>{message ? <p className="text-sm font-semibold text-red-700">{message}</p> : null}<button type="submit" disabled={saving} className="flex h-12 w-full items-center justify-center gap-2 bg-[#20341d] text-sm font-bold text-white disabled:opacity-60"><Check size={18} /> {saving ? "Guardando..." : "Guardar producto"}</button></form></motion.aside></> : null}
+        {isFormOpen ? <><motion.button type="button" aria-label="Cerrar formulario" onClick={() => setIsFormOpen(false)} className="fixed inset-0 z-[60] cursor-default bg-[#11180f]/50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} /><motion.aside role="dialog" aria-modal="true" aria-label={editingProduct ? "Editar producto" : "Crear producto"} initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 30, stiffness: 250 }} className="fixed inset-y-0 right-0 z-[70] w-full max-w-xl overflow-y-auto bg-white shadow-2xl"><div className="flex items-center justify-between border-b border-[#dedfd9] px-5 py-5 sm:px-7"><div><p className="text-xs font-bold uppercase tracking-wider text-primary">Catálogo</p><h2 className="font-serif text-3xl font-semibold">{editingProduct ? "Editar producto" : "Nuevo producto"}</h2></div><button type="button" onClick={() => setIsFormOpen(false)} className="grid h-10 w-10 place-items-center border border-[#d7d9d2]" aria-label="Cerrar"><X size={18} /></button></div><form onSubmit={saveProduct} className="space-y-5 p-5 sm:p-7"><AdminField label="Nombre"><input required value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className="admin-input" /></AdminField><AdminField label="Descripción"><textarea required value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} className="admin-input min-h-28 py-3" /></AdminField><div className="grid gap-4 sm:grid-cols-2"><AdminField label="Precio"><input required min="0" step="0.01" type="number" value={form.price} onChange={(event) => setForm({ ...form, price: event.target.value })} className="admin-input" /></AdminField><AdminField label="Stock"><input required min="0" step="0.01" type="number" value={form.stock} onChange={(event) => setForm({ ...form, stock: event.target.value })} className="admin-input" /></AdminField></div><AdminField label="Unidad de medida"><select required value={form.unitOfMeasure} onChange={(event) => setForm({ ...form, unitOfMeasure: event.target.value })} className="admin-input">{unitOptionsFor(form.unitOfMeasure).map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></AdminField><AdminField label="Categoría"><select required value={form.categoryId} onChange={(event) => setForm({ ...form, categoryId: event.target.value })} className="admin-input">{categories.map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></AdminField><ProductImagePicker files={productImages} existingImages={existingImages} onChange={setProductImages} /><div className="grid gap-4 sm:grid-cols-2"><AdminField label="Costo (opcional)"><input min="0" step="0.01" type="number" value={form.cost} onChange={(event) => setForm({ ...form, cost: event.target.value })} className="admin-input" /></AdminField><AdminField label="Margen % (opcional)"><input step="0.01" type="number" value={form.markupPercentage} onChange={(event) => setForm({ ...form, markupPercentage: event.target.value })} className="admin-input" /></AdminField></div><label className="flex items-center gap-3 border border-[#d7d9d2] p-4 text-sm font-bold"><input type="checkbox" checked={form.seasonal} onChange={(event) => setForm({ ...form, seasonal: event.target.checked })} className="h-4 w-4 accent-primary" /> Producto de temporada</label>{message ? <p className="text-sm font-semibold text-red-700">{message}</p> : null}<button type="submit" disabled={saving} className="flex h-12 w-full items-center justify-center gap-2 bg-[#20341d] text-sm font-bold text-white disabled:opacity-60"><Check size={18} /> {saving ? "Guardando..." : "Guardar producto"}</button></form></motion.aside></> : null}
       </AnimatePresence>
 
       <AnimatePresence>
@@ -324,6 +334,17 @@ export function ProductAdmin() {
 
 function AdminField({ label, children }: Readonly<{ label: string; children: React.ReactNode }>) {
   return <label className="block text-sm font-bold text-[#263324]">{label}<span className="mt-2 block">{children}</span></label>;
+}
+
+function normalizeUnit(value: string | null) {
+  const current = (value ?? "").trim().toLowerCase();
+  return current || UNIT_OPTIONS[0].value;
+}
+
+function unitOptionsFor(value: string) {
+  return UNIT_OPTIONS.some((option) => option.value === value)
+    ? UNIT_OPTIONS
+    : [...UNIT_OPTIONS, { value, label: value }];
 }
 
 function ProductImagePicker({ files, existingImages, onChange }: Readonly<{ files: File[]; existingImages: string[]; onChange: (files: File[]) => void }>) {

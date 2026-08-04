@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
-import { Mail, Menu, Search, ShoppingBag, X } from "lucide-react";
+import { Instagram, Menu, Search, ShoppingBag, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
@@ -10,28 +10,21 @@ import { Container } from "@/components/ui/Container";
 import { FREE_SHIPPING_THRESHOLD } from "@/lib/shipping";
 import { useCatalog } from "@/lib/useCatalog";
 import { formatPrice } from "@/lib/utils";
+import { site } from "@/data/site";
 import { MobileMenu } from "./MobileMenu";
 
 const navItems = [
-  { href: "/donde-comprar", label: "Donde Comprar" },
-  { href: "/sobre-nosotros", label: "Sobre Nosotros" },
-  { href: "/contacto", label: "Contacto" }
+  { href: "/donde-comprar", label: "Donde Comprar", external: false },
+  { href: "/sobre-nosotros", label: "Sobre Nosotros", external: false },
+  { href: "/catalogos", label: "Catalogos", external: false }
 ];
 
 const CATEGORY_ORDER = ["Mates", "Termos", "Bombillas", "Yerberas", "Materas", "Combos Ofertas"];
 
-const CATEGORY_COPY: Record<string, string> = {
-  Mates: "Calabaza, madera y acero para cada estilo de ronda.",
-  Termos: "Modelos termicos que sostienen la temperatura ideal.",
-  Bombillas: "Acero y alpaca con filtros que no se tapan.",
-  Yerberas: "Recipientes hermeticos para conservar el sabor.",
-  Materas: "Bolsos y estuches para llevar el equipo completo.",
-  "Combos Ofertas": "Sets listos para arrancar el ritual o regalar."
-};
+const FEATURED_CATEGORIES = ["Mates", "Termos", "Bombillas", "Materas"];
 
 const fallbackSections = ["Mates", "Termos", "Bombillas"].map((name) => ({
   title: name,
-  description: CATEGORY_COPY[name],
   href: `/productos#${encodeURIComponent(name)}`,
   count: 0
 }));
@@ -40,18 +33,14 @@ const visualFallbackCards = [
   {
     id: "fallback-mates",
     name: "Mates",
-    description: "Coleccion seleccionada para tu ritual diario.",
     image: "https://images.unsplash.com/photo-1571934811356-5cc061b6821f?auto=format&fit=crop&w=900&q=80",
-    href: "/productos#Mates",
-    badge: "Categoria destacada"
+    href: "/productos#Mates"
   },
   {
     id: "fallback-termos",
     name: "Termos",
-    description: "Modelos termicos para mantener la temperatura ideal.",
     image: "https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=900&q=80",
-    href: "/productos#Termos",
-    badge: "Categoria destacada"
+    href: "/productos#Termos"
   }
 ];
 
@@ -91,7 +80,6 @@ export function Header() {
 
     return rankedCategories.slice(0, 5).map((category) => ({
       title: category.name,
-      description: CATEGORY_COPY[category.name] ?? "Seleccion curada para completar tu ritual.",
       href: `/productos#${encodeURIComponent(category.name)}`,
       count: category.count
     }));
@@ -101,13 +89,14 @@ export function Header() {
     const withImage = rankedCategories.filter((category) => Boolean(category.image));
     if (withImage.length === 0) return visualFallbackCards;
 
-    return withImage.slice(0, 2).map((category) => ({
+    const preferred = withImage.filter((category) => FEATURED_CATEGORIES.includes(category.name));
+    const selection = (preferred.length > 0 ? preferred : withImage).slice(0, 4);
+
+    return selection.map((category) => ({
       id: category.name,
       name: category.name,
-      description: CATEGORY_COPY[category.name] ?? "Seleccion curada para completar tu ritual.",
       image: category.image as string,
-      href: `/productos#${encodeURIComponent(category.name)}`,
-      badge: "Categoria destacada"
+      href: `/productos#${encodeURIComponent(category.name)}`
     }));
   }, [rankedCategories]);
 
@@ -214,14 +203,11 @@ export function Header() {
                               onClick={() => setIsProductsOpen(false)}
                               className="group flex items-start justify-between gap-4 rounded-2xl border border-transparent px-4 py-3 transition hover:border-primary/10 hover:bg-white/70"
                             >
-                              <span>
-                                <span className="block font-serif text-xl text-forest transition group-hover:text-primary">
-                                  {section.title}
-                                </span>
-                                <span className="mt-1 block text-sm leading-6 text-muted">{section.description}</span>
+                              <span className="block font-serif text-xl text-forest transition group-hover:text-primary">
+                                {section.title}
                               </span>
                               {section.count > 0 ? (
-                                <span className="mt-1 shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
+                                <span className="shrink-0 rounded-full bg-primary/10 px-2.5 py-1 text-xs font-bold text-primary">
                                   {section.count}
                                 </span>
                               ) : null}
@@ -254,7 +240,7 @@ export function Header() {
                             onClick={() => setIsProductsOpen(false)}
                             className="group relative overflow-hidden rounded-[28px] bg-[#eadfcd] shadow-[0_18px_40px_rgba(32,52,29,0.08)]"
                           >
-                            <div className="relative aspect-[4/5]">
+                            <div className="relative aspect-square">
                               <Image
                                 src={product.image}
                                 alt={product.name}
@@ -262,14 +248,6 @@ export function Header() {
                                 sizes="(max-width: 640px) 50vw, 240px"
                                 className="object-cover transition duration-700 group-hover:scale-105"
                               />
-                              <div className="absolute inset-0 bg-gradient-to-t from-[#182216]/78 via-transparent to-transparent" />
-                              <div className="absolute inset-x-0 bottom-0 p-4 text-white">
-                                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/80">
-                                  {product.badge}
-                                </p>
-                                <p className="mt-1 font-serif text-2xl leading-tight">{product.name}</p>
-                                <p className="mt-2 text-sm leading-6 text-white/82">{product.description}</p>
-                              </div>
                             </div>
                           </Link>
                         ))}
@@ -285,6 +263,8 @@ export function Header() {
               <Link
                 key={item.href}
                 href={item.href}
+                target={item.external ? "_blank" : undefined}
+                rel={item.external ? "noopener noreferrer" : undefined}
                 className="font-serif text-lg font-semibold text-forest transition hover:text-primary"
                 onClick={() => setIsProductsOpen(false)}
               >
@@ -307,11 +287,13 @@ export function Header() {
             <Search size={20} />
           </Link>
           <Link
-            href="/contacto"
+            href={site.instagramUrl}
+            target="_blank"
+            rel="noopener noreferrer"
             className="hidden h-11 w-11 place-items-center rounded-full text-forest transition hover:bg-primary/10 hover:text-primary sm:grid"
-            aria-label="Contacto"
+            aria-label="Seguinos en Instagram"
           >
-            <Mail size={20} />
+            <Instagram size={20} />
           </Link>
           <Link
             href="/productos"

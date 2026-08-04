@@ -1,8 +1,6 @@
-import { BrandStory } from "@/components/brand/BrandStory";
 import { HeroBanner } from "@/components/home/HeroBanner";
 import { ProductMarquee } from "@/components/home/ProductMarquee";
 import { PromoBanner } from "@/components/home/PromoBanner";
-import { StoreLocator } from "@/components/locations/StoreLocator";
 import { FeaturedProducts } from "@/components/products/FeaturedProducts";
 import { site } from "@/data/site";
 
@@ -32,8 +30,6 @@ export default function Home() {
       <FeaturedProducts />
       <PromoBanner />
       <ProductMarquee />
-      <BrandStory />
-      <StoreLocator />
     </main>
   );
 }

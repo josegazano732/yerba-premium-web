@@ -46,6 +46,9 @@ async function fetchCatalog(): Promise<CatalogSnapshot> {
     ?.map(mapProductDetails)
     .filter((product): product is Product => product !== null) ?? [];
 
+  if (productsResult.error) console.error("[catalog] product_details:", productsResult.error);
+  if (categoriesResult.error) console.error("[catalog] product_categories:", categoriesResult.error);
+
   return {
     products,
     categories: (categoriesResult.data as StoreCategory[] | null) ?? []

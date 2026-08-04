@@ -15,35 +15,37 @@ const notchedFrame = {
     "polygon(28px 0, calc(100% - 28px) 0, 100% 28px, 100% calc(100% - 28px), calc(100% - 28px) 100%, 28px 100%, 0 calc(100% - 28px), 0 28px)"
 };
 
+const whatsappUrl = `https://wa.me/${site.whatsappNumber}`;
+
 const socials = [
   { Icon: Instagram, href: site.instagramUrl, label: "Instagram", external: true },
   { Icon: Music2, href: "#", label: "TikTok", external: false },
-  { Icon: Mail, href: "/contacto", label: "Contacto", external: false }
+  { Icon: Mail, href: whatsappUrl, label: "Contacto", external: true }
 ];
 
 const columns = [
   {
     title: "Comprar",
     links: [
-      { label: "Todos los productos", href: "/productos" },
-      { label: "Mates", href: "/productos#Mates" },
-      { label: "Termos", href: "/productos#Termos" },
-      { label: "Bombillas", href: "/productos#Bombillas" }
+      { label: "Todos los productos", href: "/productos", external: false },
+      { label: "Mates", href: "/productos#Mates", external: false },
+      { label: "Termos", href: "/productos#Termos", external: false },
+      { label: "Bombillas", href: "/productos#Bombillas", external: false }
     ]
   },
   {
     title: "Conocenos",
     links: [
-      { label: "Sobre Nosotros", href: "/sobre-nosotros" },
-      { label: "Donde Comprar", href: "/donde-comprar" },
-      { label: "Mayoristas", href: "/contacto" }
+      { label: "Sobre Nosotros", href: "/sobre-nosotros", external: false },
+      { label: "Donde Comprar", href: "/donde-comprar", external: false },
+      { label: "Mayoristas", href: whatsappUrl, external: true }
     ]
   },
   {
     title: "Ayuda",
     links: [
-      { label: "Contacto", href: "/contacto" },
-      { label: "Envios y cambios", href: "/contacto" }
+      { label: "Contacto", href: whatsappUrl, external: true },
+      { label: "Envios y cambios", href: whatsappUrl, external: true }
     ]
   }
 ];
@@ -77,7 +79,12 @@ export function Footer() {
                     <ul className="mt-5 space-y-3 text-sm text-muted">
                       {column.links.map((link) => (
                         <li key={`${column.title}-${link.label}`}>
-                          <Link href={link.href} className="transition hover:text-primary">
+                          <Link
+                            href={link.href}
+                            target={link.external ? "_blank" : undefined}
+                            rel={link.external ? "noopener noreferrer" : undefined}
+                            className="transition hover:text-primary"
+                          >
                             {link.label}
                           </Link>
                         </li>
@@ -129,7 +136,7 @@ export function Footer() {
       </Container>
 
       <div className="mt-12 border-t border-primary/10 bg-[#efe9dd]">
-        <Container className="flex flex-col gap-2 py-5 text-xs text-muted sm:flex-row sm:items-center sm:justify-between">
+        <Container className="flex flex-col gap-2 py-5 pb-24 text-xs text-muted sm:flex-row sm:items-center sm:justify-between sm:pb-5 sm:pr-24 lg:pr-28">
           <p>Copyright Mate Tierra - 2026. Todos los derechos reservados.</p>
           <p>
             Desarrollado por <span className="font-semibold text-forest">JLGazano</span>

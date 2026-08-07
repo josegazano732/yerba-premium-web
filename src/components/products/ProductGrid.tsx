@@ -84,12 +84,42 @@ export function ProductGrid() {
 
   const categories = ["Todos", ...Array.from(new Set(catalogProducts.map((product) => product.category)))];
 
+  // Carga el carrito guardado solo tras la hidratacion para evitar mismatch SSR/CSR.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("mate-tierra-cart");
+      if (saved) setCart(JSON.parse(saved) as CartItem[]);
+    } catch {
+      // localStorage corrupto o no disponible
+    }
+  }, []);
+
+  // Persiste el carrito para que sobreviva la navegacion entre paginas.
+  useEffect(() => {
+    try {
+      localStorage.setItem("mate-tierra-cart", JSON.stringify(cart));
+    } catch {
+      // localStorage no disponible
+    }
+  }, [cart]);
+
   useEffect(() => {
     if (catalogProducts.length === 0) return;
-    const requested = decodeURIComponent(window.location.hash.replace("#", "")).trim().toLowerCase();
-    if (!requested) return;
-    const match = catalogProducts.find((product) => product.category.toLowerCase() === requested);
-    if (match) setCategory(match.category);
+
+    function applyHash() {
+      const hash = decodeURIComponent(window.location.hash.replace("#", "")).trim().toLowerCase();
+      if (!hash) return;
+      if (hash === "carrito") {
+        setIsCartOpen(true);
+        return;
+      }
+      const match = catalogProducts.find((product) => product.category.toLowerCase() === hash);
+      if (match) setCategory(match.category);
+    }
+
+    applyHash();
+    window.addEventListener("hashchange", applyHash);
+    return () => window.removeEventListener("hashchange", applyHash);
   }, [catalogProducts]);
 
   const visibleProducts = catalogProducts
@@ -505,7 +535,7 @@ export function ProductGrid() {
 
               <div className="flex-1 overflow-y-auto px-5 py-6 sm:px-7">
                 {cart.length === 0 ? (
-                  <div className="grid h-full place-items-center text-center"><div><ShoppingBag className="mx-auto text-primary" size={34} /><h3 className="mt-5 font-serif text-2xl font-semibold">Tu carrito está vacío</h3><p className="mt-2 text-sm text-muted">Elegí algo rico para comenzar.</p><button type="button" onClick={() => setIsCartOpen(false)} className="mt-6 rounded-full bg-[#20341d] px-5 py-3 text-sm font-bold text-white">Explorar productos</button></div></div>
+                  <div className="grid h-full place-items-center text-center"><div><ShoppingBag className="mx-auto text-primary" size={34} /><h3 className="mt-5 font-serif text-2xl font-semibold">Tu carrito está vacío</h3><p className="mt-2 text-sm text-muted">Buscá tu mate ideal, elegí tus hierbas y armá tu pedido en minutos.</p><button type="button" onClick={() => setIsCartOpen(false)} className="mt-6 rounded-full bg-[#20341d] px-5 py-3 text-sm font-bold text-white">Explorar productos</button></div></div>
                 ) : (
                   <>
                     <div className="space-y-5">

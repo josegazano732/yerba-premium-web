@@ -9,8 +9,8 @@ import { useCatalog } from "@/lib/useCatalog";
 
 const fallbackImages = [
   "https://images.unsplash.com/photo-1516824711718-9c1e683412ac?auto=format&fit=crop&w=1100&q=85",
-  "https://images.unsplash.com/photo-1615485737457-f07082c77813?auto=format&fit=crop&w=600&q=80",
-  "https://images.unsplash.com/photo-1523920290228-4f321a939b4c?auto=format&fit=crop&w=600&q=80"
+  "https://images.unsplash.com/photo-1571068316344-75bc76f77890?auto=format&fit=crop&w=600&q=80",
+  "https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=600&q=80"
 ];
 
 function listCategories(names: string[]) {
@@ -32,10 +32,19 @@ export function BrandStory() {
       .sort((first, second) => second[1] - first[1])
       .map(([name, count]) => ({ name, count }));
 
-    // Una imagen por categoria principal para que el collage refleje el surtido real.
+    // Priorizar categorias visuales del rubro: mates, termos, canastas, hierbas, bombillas.
+    const GALLERY_KEYWORDS = ["mate", "termo", "canasta", "hierba", "bombill"];
+    const preferred = ranked.filter((cat) =>
+      GALLERY_KEYWORDS.some((kw) => cat.name.toLowerCase().includes(kw))
+    );
+    const rest = ranked.filter(
+      (cat) => !GALLERY_KEYWORDS.some((kw) => cat.name.toLowerCase().includes(kw))
+    );
+    const prioritized = [...preferred, ...rest];
+
     const picks: string[] = [];
-    for (const { name } of ranked) {
-      const match = products.find((product) => product.category === name);
+    for (const { name } of prioritized) {
+      const match = products.find((product) => product.category === name && product.image);
       if (match) picks.push(match.image);
       if (picks.length === 3) break;
     }
@@ -55,18 +64,18 @@ export function BrandStory() {
         <div>
           <Badge>Nuestra tienda</Badge>
           <h2 className="mt-4 font-serif text-4xl font-semibold text-text sm:text-5xl">
-            Especialistas en {categoryNames[0] ? categoryNames[0].toLowerCase() : "mate"} y todo el equipo matero
+            Seleccionamos lo que vendemos. Si está en el catálogo, es porque lo aprobamos.
           </h2>
           <p className="mt-6 text-lg leading-8 text-muted">
-            Trabajamos con {listCategories(categoryNames)}: cada pieza se elige a mano, se prueba y recien despues entra
-            al catalogo. Nada de fotos lindas con productos que no existen.
+            No revendemos cajas cerradas: cada mate, termo, hierba, bombilla y canasta que tenemos en stock
+            lo elegimos, lo probamos y lo conocemos. Ese criterio de selección es el valor que agregamos.
           </p>
           <p className="mt-4 text-lg leading-8 text-muted">
             {isLoading
-              ? "Estamos cargando el surtido disponible en el deposito."
+              ? "Cargando el surtido disponible en el depósito..."
               : `Hoy tenemos ${products.length} productos publicados${
-                  totalStock > 0 ? ` y ${totalStock} unidades listas para despachar` : ""
-                }, con reposicion permanente de lo que mas sale.`}
+                  totalStock > 0 ? ` y ${totalStock.toLocaleString("es-AR")} unidades en depósito listas para despachar` : ""
+                }, con reposición permanente de lo que más rota.`}
           </p>
 
           <Button href="/productos" className="mt-8 px-7 py-3 text-base">

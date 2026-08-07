@@ -1,10 +1,13 @@
 "use client";
 
-import { MapPin, Search } from "lucide-react";
+import { ExternalLink, MapPin, Search } from "lucide-react";
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import { Container } from "@/components/ui/Container";
 import { Input } from "@/components/ui/Input";
-import { stores } from "@/data/stores";
+import { mainStoreMapEmbed, mainStoreMapLink, stores } from "@/data/stores";
+
+const remoteLogo = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/products/branding/site-logo`;
 
 export function StoreLocator() {
   const [query, setQuery] = useState("");
@@ -42,7 +45,16 @@ export function StoreLocator() {
             </div>
             <div className="mt-5 space-y-3">
               {filteredStores.map((store) => (
-                <article key={store.id} className="rounded-[8px] bg-white p-4">
+                <article key={store.id} className="relative overflow-hidden rounded-[8px] bg-white p-4">
+                  <Image
+                    src={remoteLogo}
+                    alt=""
+                    aria-hidden
+                    width={200}
+                    height={61}
+                    unoptimized
+                    className="pointer-events-none absolute bottom-2 right-3 h-10 w-auto object-contain opacity-20"
+                  />
                   <p className="font-bold text-text">{store.name}</p>
                   <p className="mt-1 text-sm text-muted">{store.address}, {store.city}, {store.province}</p>
                 </article>
@@ -50,15 +62,24 @@ export function StoreLocator() {
             </div>
           </div>
 
-          <div className="relative min-h-[420px] overflow-hidden rounded-[8px] bg-secondary/45">
-            <div className="absolute inset-0 grain opacity-80" />
-            <div className="absolute left-[16%] top-[30%] grid h-14 w-14 place-items-center rounded-full bg-primary text-white shadow-xl"><MapPin /></div>
-            <div className="absolute left-[58%] top-[44%] grid h-14 w-14 place-items-center rounded-full bg-accent text-white shadow-xl"><MapPin /></div>
-            <div className="absolute left-[38%] top-[62%] grid h-14 w-14 place-items-center rounded-full bg-primary text-white shadow-xl"><MapPin /></div>
-            <div className="absolute inset-x-8 bottom-8 rounded-[8px] bg-white/85 p-5 backdrop-blur">
-              <p className="font-serif text-2xl font-semibold text-text">+1.800 puntos de venta</p>
-              <p className="mt-1 text-sm text-muted">Mapa ilustrativo listo para conectar con geolocalizacion o proveedor externo.</p>
-            </div>
+          <div className="relative min-h-[420px] overflow-hidden rounded-[8px] border border-primary/15 shadow-sm">
+            <iframe
+              src={mainStoreMapEmbed}
+              title="Ubicaci\u00f3n de Mate Tierra"
+              className="h-full w-full border-0"
+              style={{ minHeight: "420px" }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+            <a
+              href={mainStoreMapLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="absolute bottom-4 right-4 inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-xs font-bold text-[#20341d] shadow-md backdrop-blur-sm transition hover:bg-white"
+            >
+              <MapPin size={13} /> Ver en Google Maps <ExternalLink size={12} />
+            </a>
           </div>
         </div>
       </Container>

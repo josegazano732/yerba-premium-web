@@ -9,6 +9,8 @@ declare module "lucide-react" {
   export const ChevronLeft: LucideIcon;
   export const ChevronRight: LucideIcon;
   export const CreditCard: LucideIcon;
+  export const ExternalLink: LucideIcon;
+  export const FileDown: LucideIcon;
   export const Filter: LucideIcon;
   export const Instagram: LucideIcon;
   export const Leaf: LucideIcon;

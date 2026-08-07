@@ -296,9 +296,9 @@ export function Header() {
             <Instagram size={20} />
           </Link>
           <Link
-            href="/productos"
+            href="/productos#carrito"
             className="grid h-11 w-11 place-items-center rounded-full text-forest transition hover:bg-primary/10 hover:text-primary"
-            aria-label="Ir a la tienda"
+            aria-label="Ir al carrito"
           >
             <ShoppingBag size={20} />
           </Link>

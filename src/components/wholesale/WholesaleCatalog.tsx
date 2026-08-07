@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ArrowRight, ChevronLeft, FileDown, Leaf, Minus, Plus, Search, ShoppingBag, Trash2, X } from "lucide-react";
 import Image from "next/image";
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import { Container } from "@/components/ui/Container";
 import { mapProductDetails, Product, ProductDetailsRow } from "@/data/products";
 import { site } from "@/data/site";
@@ -68,8 +68,39 @@ export function WholesaleCatalog() {
   const [query, setQuery] = useState("");
   const [order, setOrder] = useState<OrderLine[]>([]);
   const [isOrderOpen, setIsOrderOpen] = useState(false);
+  const orderSaveMounted = useRef(false);
+
+  // Restaura el pedido guardado tras la hidratacion.
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("mate-tierra-wholesale-order");
+      if (saved) setOrder(JSON.parse(saved) as OrderLine[]);
+    } catch {
+      // localStorage corrupto o no disponible
+    }
+  }, []);
+
+  // Salta la primera ejecucion (order = []) para no pisar el storage con un array vacio.
+  useEffect(() => {
+    if (!orderSaveMounted.current) {
+      orderSaveMounted.current = true;
+      return;
+    }
+    try {
+      localStorage.setItem("mate-tierra-wholesale-order", JSON.stringify(order));
+    } catch {
+      // localStorage no disponible
+    }
+  }, [order]);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [pdfError, setPdfError] = useState("");
+  const [addedLine, setAddedLine] = useState<{ product: Product; grams: number | null; label: string } | null>(null);
+
+  useEffect(() => {
+    if (!addedLine) return;
+    const timer = setTimeout(() => setAddedLine(null), 2800);
+    return () => clearTimeout(timer);
+  }, [addedLine]);
 
   useEffect(() => {
     const requested = decodeURIComponent(window.location.hash.replace("#", "")).trim().toLowerCase();
@@ -425,7 +456,10 @@ export function WholesaleCatalog() {
                               ) : (
                                 <button
                                   type="button"
-                                  onClick={() => setQuantity(product, presentation.grams, 1)}
+                                  onClick={() => {
+                                    setQuantity(product, presentation.grams, 1);
+                                    setAddedLine({ product, grams: presentation.grams, label: presentation.label });
+                                  }}
                                   className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[#20341d] px-3.5 text-xs font-bold text-[#20341d] transition hover:bg-[#20341d] hover:text-white"
                                   aria-label={`Agregar ${presentation.label} de ${product.name}`}
                                 >
@@ -451,16 +485,24 @@ export function WholesaleCatalog() {
         </div>
       </Container>
 
-      {order.length > 0 ? (
-        <button
-          type="button"
-          onClick={() => setIsOrderOpen(true)}
-          className="fixed bottom-6 left-1/2 z-40 inline-flex h-12 -translate-x-1/2 items-center gap-3 rounded-full bg-[#20341d] px-6 text-sm font-bold text-white shadow-xl transition hover:bg-primary"
-        >
-          <ShoppingBag size={18} /> Ver pedido ({totalUnits})
-          <span className="border-l border-white/30 pl-3">{currency.format(orderTotal)}</span>
-        </button>
-      ) : null}
+      <AnimatePresence>
+        {order.length > 0 ? (
+          <motion.button
+            type="button"
+            onClick={() => setIsOrderOpen(true)}
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 20, opacity: 0 }}
+            transition={{ duration: 0.2 }}
+            className="fixed bottom-6 left-1/2 z-40 -translate-x-1/2 inline-flex h-12 max-w-[calc(100vw-2rem)] items-center gap-2 whitespace-nowrap rounded-full bg-[#20341d] px-4 text-sm font-bold text-white shadow-xl transition hover:bg-primary sm:gap-3 sm:px-6"
+          >
+            <ShoppingBag size={16} className="shrink-0" />
+            <span>Ver pedido</span>
+            <span className="rounded-full bg-white/20 px-2 py-0.5 text-xs font-bold">{totalUnits}</span>
+            <span className="border-l border-white/30 pl-2 sm:pl-3">{currency.format(orderTotal)}</span>
+          </motion.button>
+        ) : null}
+      </AnimatePresence>
 
       <AnimatePresence>
         {isOrderOpen ? (
@@ -574,6 +616,63 @@ export function WholesaleCatalog() {
                 </p>
               </div>
             </motion.aside>
+          </>
+        ) : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {addedLine ? (
+          <>
+            <motion.button
+              type="button"
+              aria-label="Cerrar aviso"
+              onClick={() => setAddedLine(null)}
+              className="fixed inset-0 z-[80] cursor-default bg-[#11180f]/40 backdrop-blur-sm"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            />
+            <div className="pointer-events-none fixed inset-0 z-[90] grid place-items-center p-4">
+              <motion.div
+                role="status"
+                aria-live="polite"
+                initial={{ opacity: 0, y: 16, scale: 0.97 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: 16, scale: 0.97 }}
+                transition={{ duration: 0.2, ease: "easeOut" }}
+                className="pointer-events-auto w-full max-w-md rounded-[10px] bg-[#fffdf8] p-6 shadow-2xl"
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <p className="font-serif text-xl font-semibold text-[#20341d]">¡Agregado al pedido!</p>
+                  <button
+                    type="button"
+                    onClick={() => setAddedLine(null)}
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-[#d7d2c7] transition hover:border-primary"
+                    aria-label="Cerrar"
+                  >
+                    <X size={17} />
+                  </button>
+                </div>
+                <div className="mt-5 flex items-center gap-4">
+                  <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[6px] bg-secondary/35">
+                    <Image src={addedLine.product.image} alt={addedLine.product.name} fill sizes="56px" className="object-cover" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-semibold text-[#20341d]">{addedLine.product.name}</p>
+                    <p className="mt-0.5 text-xs text-muted">
+                      {addedLine.label} &middot; {currency.format(priceFor(addedLine.product, addedLine.grams))}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => { setAddedLine(null); setIsOrderOpen(true); }}
+                  className="mt-5 h-10 w-full rounded-[6px] bg-[#20341d] text-sm font-bold text-white transition hover:bg-primary"
+                >
+                  Ver pedido ({totalUnits})
+                </button>
+              </motion.div>
+            </div>
           </>
         ) : null}
       </AnimatePresence>

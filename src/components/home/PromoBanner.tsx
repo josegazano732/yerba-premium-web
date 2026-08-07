@@ -34,7 +34,7 @@ export function PromoBanner() {
   if (!image) return null;
 
   return (
-    <section className="bg-background pb-16 sm:pb-20">
+    <section className="bg-background py-16 sm:py-20">
       <Container>
         <Link
           href="/productos"
@@ -46,7 +46,7 @@ export function PromoBanner() {
               alt="Novedades de la tienda"
               fill
               sizes="(max-width: 1024px) 100vw, 1200px"
-              className="object-cover transition duration-700 group-hover:scale-[1.02]"
+              className="object-cover object-center transition duration-700 group-hover:scale-[1.02]"
             />
           </div>
         </Link>

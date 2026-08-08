@@ -15,13 +15,17 @@ const fallbackImages = [
 export function ProductMarquee() {
   const { products } = useCatalog();
 
+  const ALLOWED_CATEGORIES = ["Termos", "Mates", "Materas", "Calcomanias", "Bombillas"];
+
   const items = useMemo(() => {
     if (products.length === 0) {
       return fallbackImages.map((image, index) => ({ id: `fallback-${index}`, name: "Yerba Libre", image }));
     }
 
+    const filtered = products.filter((p) => ALLOWED_CATEGORIES.includes(p.category));
+
     const byCategory = new Map<string, typeof products>();
-    for (const product of products) {
+    for (const product of filtered) {
       const bucket = byCategory.get(product.category) ?? [];
       bucket.push(product);
       byCategory.set(product.category, bucket);

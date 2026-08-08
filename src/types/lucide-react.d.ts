@@ -4,6 +4,7 @@ declare module "lucide-react" {
   export type LucideIcon = (props: SVGProps<SVGSVGElement> & { size?: number | string }) => JSX.Element;
 
   export const ArrowRight: LucideIcon;
+  export const ArrowUp: LucideIcon;
   export const Check: LucideIcon;
   export const ChevronDown: LucideIcon;
   export const ChevronLeft: LucideIcon;

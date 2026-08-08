@@ -58,6 +58,11 @@ body {
   }
 }
 
+/* Oculta WhatsApp FAB cuando la IA Matera está abierta */
+body[data-ai-open="true"] #whatsapp-fab {
+  display: none;
+}
+
 ::selection {
   background: var(--secondary);
   color: var(--text);

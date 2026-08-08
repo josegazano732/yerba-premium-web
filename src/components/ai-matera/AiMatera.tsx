@@ -42,6 +42,10 @@ export function AiMatera() {
   }, [messages, isOpen]);
 
   useEffect(() => {
+    document.body.dataset.aiOpen = isOpen ? "true" : "";
+  }, [isOpen]);
+
+  useEffect(() => {
     if (isOpen) inputRef.current?.focus();
   }, [isOpen]);
 
@@ -152,7 +156,7 @@ export function AiMatera() {
         type="button"
         onClick={() => setIsOpen(true)}
         aria-label="Abrir IA Matera"
-        className="fixed bottom-[88px] right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-[#20341d] text-white shadow-xl ring-1 ring-white/10 transition-all hover:scale-105 hover:bg-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:bottom-28 sm:right-6 sm:h-[60px] sm:w-[60px]"
+        className="fixed bottom-[88px] right-4 z-[90] flex h-14 w-14 items-center justify-center rounded-full bg-[#20341d] text-white shadow-xl ring-1 ring-white/10 transition-all hover:scale-105 hover:bg-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:bottom-28 sm:right-6 sm:h-[60px] sm:w-[60px]"
       >
         <span className="text-2xl leading-none" aria-hidden>🧉</span>
       </button>

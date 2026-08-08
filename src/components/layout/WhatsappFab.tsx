@@ -3,6 +3,7 @@ import { site } from "@/data/site";
 export function WhatsappFab() {
   return (
     <a
+      id="whatsapp-fab"
       href={`https://wa.me/${site.whatsappNumber}`}
       target="_blank"
       rel="noopener noreferrer"

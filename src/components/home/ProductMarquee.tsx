@@ -12,10 +12,10 @@ const fallbackImages = [
   "https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=600&q=70"
 ];
 
+const ALLOWED_CATEGORIES = ["Termos", "Mates", "Materas", "Calcomanias", "Bombillas"];
+
 export function ProductMarquee() {
   const { products } = useCatalog();
-
-  const ALLOWED_CATEGORIES = ["Termos", "Mates", "Materas", "Calcomanias", "Bombillas"];
 
   const items = useMemo(() => {
     if (products.length === 0) {

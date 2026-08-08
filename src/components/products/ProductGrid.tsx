@@ -8,11 +8,11 @@ import { mapProductDetails, Product, ProductDetailsRow, products as fallbackProd
 import { site } from "@/data/site";
 import { FREE_SHIPPING_THRESHOLD, getShippingQuotes, isValidPostalCode, ShippingQuote } from "@/lib/shipping";
 import { supabase } from "@/lib/supabase";
+import { useCart } from "@/lib/cart-context";
 import { ProductCard } from "./ProductCard";
 import { ProductDetail } from "./ProductDetail";
 
 type Sort = "featured" | "price-asc" | "price-desc" | "name";
-type CartItem = { product: Product; quantity: number };
 
 const sortOptions: Array<{ value: Sort; label: string }> = [
   { value: "featured", label: "Destacados" },
@@ -32,7 +32,7 @@ export function ProductGrid() {
   const [category, setCategory] = useState("Todos");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("featured");
-  const [cart, setCart] = useState<CartItem[]>([]);
+  const { cart, addToCart: cartAdd, changeQuantity, removeFromCart } = useCart();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [addedProduct, setAddedProduct] = useState<Product | null>(null);
@@ -83,25 +83,6 @@ export function ProductGrid() {
   }, []);
 
   const categories = ["Todos", ...Array.from(new Set(catalogProducts.map((product) => product.category)))];
-
-  // Carga el carrito guardado solo tras la hidratacion para evitar mismatch SSR/CSR.
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem("mate-tierra-cart");
-      if (saved) setCart(JSON.parse(saved) as CartItem[]);
-    } catch {
-      // localStorage corrupto o no disponible
-    }
-  }, []);
-
-  // Persiste el carrito para que sobreviva la navegacion entre paginas.
-  useEffect(() => {
-    try {
-      localStorage.setItem("mate-tierra-cart", JSON.stringify(cart));
-    } catch {
-      // localStorage no disponible
-    }
-  }, [cart]);
 
   useEffect(() => {
     if (catalogProducts.length === 0) return;
@@ -210,20 +191,8 @@ export function ProductGrid() {
     : [];
 
   function addToCart(product: Product, quantity = 1) {
-    setCart((current) => {
-      const existing = current.find((item) => item.product.id === product.id);
-      if (existing) {
-        return current.map((item) => item.product.id === product.id ? { ...item, quantity: item.quantity + quantity } : item);
-      }
-      return [...current, { product, quantity }];
-    });
+    cartAdd(product, quantity);
     setAddedProduct(product);
-  }
-
-  function changeQuantity(productId: string, amount: number) {
-    setCart((current) => current
-      .map((item) => item.product.id === productId ? { ...item, quantity: item.quantity + amount } : item)
-      .filter((item) => item.quantity > 0));
   }
 
   function buildWhatsappLink() {
@@ -547,7 +516,7 @@ export function ProductGrid() {
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-3">
                               <h3 className="text-sm font-semibold leading-snug text-[#20341d]">{item.product.name}</h3>
-                              <button type="button" onClick={() => setCart((current) => current.filter((cartItem) => cartItem.product.id !== item.product.id))} className="shrink-0 text-xs font-semibold text-muted underline-offset-2 transition hover:text-red-700 hover:underline" aria-label={`Quitar ${item.product.name}`}>
+                              <button type="button" onClick={() => removeFromCart(item.product.id)} className="shrink-0 text-xs font-semibold text-muted underline-offset-2 transition hover:text-red-700 hover:underline" aria-label={`Quitar ${item.product.name}`}>
                                 Borrar
                               </button>
                             </div>

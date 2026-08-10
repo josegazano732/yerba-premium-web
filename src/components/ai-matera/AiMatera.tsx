@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
-import { ArrowUp, Minus, Plus, ShoppingBag, Sparkles, X } from "lucide-react";
+import { ArrowUp, Minus, Plus, ShoppingBag, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Product } from "@/data/products";
 import { useCart } from "@/lib/cart-context";
@@ -17,7 +17,7 @@ const uid = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice
 const WELCOME: AiMessage = {
   id: "welcome",
   role: "assistant",
-  content: "Hola 👋 Soy IA Matera. Te voy a ayudar a encontrar el producto ideal y armar tu pedido. Contame, ¿qué estás buscando hoy?",
+  content: "Hola 👋 Soy el Agente Matero. Te voy a ayudar a encontrar el producto ideal y armar tu pedido. Contame, ¿qué estás buscando hoy?",
   quickReplies: ["Yerba mate", "Mates y accesorios", "Termos y bombillas", "Armar un combo"]
 };
 
@@ -133,7 +133,7 @@ export function AiMatera() {
       `${i + 1}) ${item.product.name}\n   ${item.quantity} x ${currency.format(item.product.price)} = ${currency.format(item.product.price * item.quantity)}`
     );
     const msg = [
-      "Hola! Quiero hacer este pedido (armado con IA Matera):",
+      "Hola! Quiero hacer este pedido (armado con el Agente Matero):",
       "",
       ...lines,
       "",
@@ -149,17 +149,57 @@ export function AiMatera() {
     void sendMessage(`Agregá uno de ${product.name} al pedido`);
   }
 
+  // Convierte URLs en <a> clickeables y \n en saltos de línea reales
+  function renderContent(content: string) {
+    const parts = content.split(/(https?:\/\/[^\s]+)/);
+    return parts.map((part, i) =>
+      /^https?:\/\//.test(part) ? (
+        <a key={i} href={part} target="_blank" rel="noopener noreferrer"
+           className="break-all font-medium underline decoration-primary/40 underline-offset-2 hover:decoration-primary">
+          {part}
+        </a>
+      ) : (
+        <span key={i}>
+          {part.split("\n").flatMap((line, j, arr) =>
+            j < arr.length - 1 ? [line, <br key={j} />] : [line]
+          )}
+        </span>
+      )
+    );
+  }
+
   return (
     <>
-      {/* FAB — subido en mobile para no chocar con WhatsApp */}
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        aria-label="Abrir IA Matera"
-        className="fixed bottom-[88px] right-4 z-[90] flex h-14 w-14 items-center justify-center rounded-full bg-[#20341d] text-white shadow-xl ring-1 ring-white/10 transition-all hover:scale-105 hover:bg-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 sm:bottom-28 sm:right-6 sm:h-[60px] sm:w-[60px]"
+      {/* FAB Agente Matero */}
+      <motion.div
+        className="fixed bottom-[88px] right-4 z-[90] sm:bottom-28 sm:right-6"
+        initial={{ opacity: 0, x: 40 }}
+        animate={{ opacity: 1, x: 0 }}
+        transition={{ delay: 1.2, duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
       >
-        <span className="text-2xl leading-none" aria-hidden>🧉</span>
-      </button>
+        {[0, 1].map((i) => (
+          <motion.span
+            key={i}
+            className="pointer-events-none absolute inset-0 rounded-full border border-[#4a7c45]/60"
+            animate={{ scale: [1, 1.6], opacity: [0.6, 0] }}
+            transition={{ duration: 2.4, repeat: Infinity, ease: "easeOut", delay: i * 1 }}
+            aria-hidden
+          />
+        ))}
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          aria-label="Abrir Agente Matero"
+          className="relative flex items-center gap-2 rounded-full bg-[#20341d] py-3 pl-3.5 pr-4 text-white shadow-[0_8px_32px_rgba(32,52,29,0.45)] ring-1 ring-white/10 transition-all hover:scale-105 hover:shadow-[0_12px_40px_rgba(32,52,29,0.55)] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 active:scale-95"
+        >
+          <span className="text-xl leading-none" aria-hidden>🧉</span>
+          <span className="text-[13px] font-bold tracking-wide">Agente Matero</span>
+          <span className="relative flex h-2.5 w-2.5" aria-hidden>
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#4ade80] opacity-75" />
+            <span className="relative h-2.5 w-2.5 rounded-full bg-[#4ade80]" />
+          </span>
+        </button>
+      </motion.div>
 
       {/* Panel */}
       <AnimatePresence>
@@ -180,7 +220,7 @@ export function AiMatera() {
             <motion.div
               role="dialog"
               aria-modal="true"
-              aria-label="IA Matera"
+              aria-label="Agente Matero"
               initial={{ opacity: 0, y: 40 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 40 }}
@@ -193,15 +233,18 @@ export function AiMatera() {
               </div>
 
               {/* Header */}
-              <div className="flex shrink-0 items-center justify-between gap-3 bg-[#20341d] px-4 py-3.5 sm:rounded-none sm:px-6">
+              <div className="flex shrink-0 items-center justify-between gap-3 bg-gradient-to-r from-[#182b16] to-[#20341d] px-4 py-3.5 sm:px-6">
                 <div className="flex items-center gap-3">
-                  <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-2xl leading-none ring-2 ring-white/20">
+                  <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl leading-none ring-2 ring-white/20">
                     🧉
-                    <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-[#20341d] bg-[#4ade80]" />
+                    <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#4ade80] opacity-60" />
+                      <span className="relative h-3.5 w-3.5 rounded-full border-2 border-[#20341d] bg-[#4ade80]" />
+                    </span>
                   </div>
                   <div>
-                    <p className="font-serif text-[15px] font-semibold leading-tight text-[#d7e68c]">IA Matera</p>
-                    <p className="text-[11px] leading-tight text-white/50">Asistente · en línea</p>
+                    <p className="text-[15px] font-bold leading-tight tracking-tight text-white">Agente Matero</p>
+                    <p className="text-[11px] leading-tight text-[#4ade80]/80">● en línea ahora</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -219,7 +262,7 @@ export function AiMatera() {
                     type="button"
                     onClick={() => setIsOpen(false)}
                     className="grid h-8 w-8 place-items-center rounded-full bg-white/10 text-white/70 transition hover:bg-white/20 hover:text-white"
-                    aria-label="Cerrar IA Matera"
+                    aria-label="Cerrar Agente Matero"
                   >
                     <X size={16} />
                   </button>
@@ -227,19 +270,31 @@ export function AiMatera() {
               </div>
 
               {/* Mobile tabs */}
-              <div className="flex shrink-0 border-b border-[#e8e2d8] bg-white lg:hidden">
+              <div className="flex shrink-0 gap-1.5 border-b border-[#e8e2d8] bg-[#faf7f2] px-2 py-2 lg:hidden">
                 {(["chat", "order"] as const).map((tab) => (
                   <button
                     key={tab}
                     type="button"
                     onClick={() => setActiveTab(tab)}
-                    className={`flex-1 py-3 text-sm font-semibold transition-colors ${
+                    className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-sm font-semibold transition-all ${
                       activeTab === tab
-                        ? "border-b-2 border-primary text-primary"
-                        : "text-muted hover:text-text"
+                        ? "bg-[#20341d] text-white shadow-sm"
+                        : "text-muted hover:bg-[#ede9e0]"
                     }`}
                   >
-                    {tab === "chat" ? "Conversación" : `Pedido${cartCount > 0 ? ` · ${cartCount}` : ""}`}
+                    {tab === "chat" ? (
+                      "💬 Chat"
+                    ) : (
+                      <span className="flex items-center gap-1.5">
+                        <ShoppingBag size={13} />
+                        Pedido
+                        {cartCount > 0 ? (
+                          <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold leading-none ${
+                            activeTab === "order" ? "bg-[#d7e68c] text-[#20341d]" : "bg-primary/20 text-primary"
+                          }`}>{cartCount}</span>
+                        ) : null}
+                      </span>
+                    )}
                   </button>
                 ))}
               </div>
@@ -250,7 +305,7 @@ export function AiMatera() {
                 {/* ── Chat column ── */}
                 <div className={`flex min-h-0 flex-1 flex-col bg-[#f5f0e8] ${activeTab !== "chat" ? "hidden lg:flex" : ""}`}>
                   {/* Messages */}
-                  <div className="flex-1 overflow-y-auto px-3 py-4 sm:px-5 sm:py-5">
+                  <div className="flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-5 sm:py-5">
                     <div className="flex flex-col gap-4">
                       {messages.map((msg) => (
                         <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -260,8 +315,8 @@ export function AiMatera() {
                             <div className="flex max-w-[88%] items-end gap-2 sm:max-w-[78%]">
                               <span className="mb-1 shrink-0 text-lg leading-none" aria-hidden>🧉</span>
                               <div className="min-w-0">
-                                <div className="rounded-2xl rounded-bl-sm bg-white px-4 py-3 text-sm leading-relaxed text-text shadow-sm">
-                                  {msg.content}
+                                <div className="break-words rounded-2xl rounded-bl-sm bg-white px-4 py-3 text-sm leading-relaxed text-text shadow-sm ring-1 ring-black/[0.04]">
+                                  {renderContent(msg.content)}
                                 </div>
                                 {msg.products && msg.products.length > 0 ? (
                                   <div className="mt-3 flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
@@ -283,7 +338,7 @@ export function AiMatera() {
                                         type="button"
                                         onClick={() => void sendMessage(reply)}
                                         disabled={isLoading}
-                                        className="rounded-full border border-primary/30 bg-white px-3.5 py-1.5 text-xs font-semibold text-primary shadow-sm transition hover:border-primary hover:bg-primary/10 disabled:opacity-50"
+                                        className="rounded-full border border-primary/30 bg-white px-4 py-2 text-xs font-semibold text-primary shadow-sm transition hover:border-primary/70 hover:bg-primary/10 active:scale-95 disabled:opacity-50"
                                       >
                                         {reply}
                                       </button>
@@ -308,7 +363,7 @@ export function AiMatera() {
                           ) : (
                             /* User */
                             <div className="max-w-[80%] sm:max-w-[70%]">
-                              <div className="rounded-2xl rounded-br-sm bg-[#20341d] px-4 py-3 text-sm leading-relaxed text-white">
+                              <div className="break-words rounded-2xl rounded-br-sm bg-[#20341d] px-4 py-3 text-sm leading-relaxed text-white">
                                 {msg.content}
                               </div>
                             </div>
@@ -320,13 +375,18 @@ export function AiMatera() {
                   </div>
 
                   {/* Input */}
-                  <div className="shrink-0 border-t border-[#e0dbd0] bg-white px-3 py-3 sm:px-4 sm:py-4">
+                  <div className="shrink-0 border-t border-[#e0dbd0] bg-white px-3 py-3 pb-[max(12px,env(safe-area-inset-bottom))] sm:px-4 sm:py-4 sm:pb-4">
                     <div className="flex items-end gap-2">
                       <textarea
                         ref={inputRef}
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
+                        onInput={(e) => {
+                          const t = e.currentTarget;
+                          t.style.height = "auto";
+                          t.style.height = `${Math.min(t.scrollHeight, 112)}px`;
+                        }}
                         disabled={isLoading}
                         rows={1}
                         placeholder="Escribí tu mensaje…"
@@ -337,20 +397,25 @@ export function AiMatera() {
                         type="button"
                         onClick={() => void sendMessage(input)}
                         disabled={isLoading || !input.trim()}
-                        className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#20341d] text-white shadow-sm transition hover:bg-primary disabled:opacity-35"
+                        className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-[#20341d] text-white shadow-sm transition hover:bg-primary active:scale-95 disabled:opacity-35"
                         aria-label="Enviar mensaje"
                       >
                         <ArrowUp size={18} strokeWidth={2.5} />
                       </button>
                     </div>
-                    <p className="mt-1.5 px-1 text-[10px] text-muted/70">Enter para enviar · Shift+Enter para nueva línea</p>
+                    <p className="mt-1.5 px-1 text-[10px] text-muted/60">Enter para enviar · Shift+Enter para nueva línea</p>
                   </div>
                 </div>
 
                 {/* ── Order panel ── */}
                 <div className={`flex w-full shrink-0 flex-col bg-white lg:w-72 lg:border-l lg:border-[#e8e2d8] xl:w-80 ${activeTab !== "order" ? "hidden lg:flex" : ""}`}>
-                  <div className="shrink-0 border-b border-[#e8e2d8] px-4 py-3">
+                  <div className="flex shrink-0 items-center justify-between border-b border-[#e8e2d8] px-4 py-3">
                     <p className="font-serif text-lg font-semibold text-[#20341d]">Tu pedido</p>
+                    {cartCount > 0 ? (
+                      <span className="rounded-full bg-[#20341d] px-2.5 py-0.5 text-xs font-bold text-white">
+                        {cartCount} {cartCount === 1 ? "item" : "items"}
+                      </span>
+                    ) : null}
                   </div>
 
                   <div className="flex-1 overflow-y-auto p-4">
@@ -423,10 +488,12 @@ export function AiMatera() {
                         href={buildWhatsappLink()}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#20341d] text-sm font-bold text-white transition hover:bg-primary focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                        className="mt-3 flex h-12 w-full items-center justify-center gap-2 rounded-2xl bg-[#25d366] text-sm font-bold text-white shadow-md transition hover:bg-[#20c55e] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-[#25d366] focus:ring-offset-2"
                       >
-                        <Sparkles size={15} />
-                        Finalizar por WhatsApp
+                        <svg viewBox="0 0 24 24" fill="currentColor" className="h-[18px] w-[18px] shrink-0" aria-hidden>
+                          <path d="M17.47 14.38c-.3-.15-1.75-.86-2.02-.96-.27-.1-.47-.15-.67.15-.2.3-.77.96-.94 1.16-.17.2-.35.22-.65.07-.3-.15-1.25-.46-2.38-1.47-.88-.78-1.47-1.75-1.64-2.05-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.02-.52-.08-.15-.67-1.6-.92-2.2-.24-.58-.49-.5-.67-.51h-.57c-.2 0-.52.07-.79.37-.27.3-1.04 1.02-1.04 2.48s1.07 2.88 1.22 3.08c.15.2 2.1 3.2 5.08 4.49.71.3 1.26.49 1.69.63.71.22 1.36.19 1.87.12.57-.09 1.75-.71 2-1.4.25-.69.25-1.28.17-1.4-.07-.13-.27-.2-.57-.35z" /><path d="M12.04 2C6.6 2 2.18 6.42 2.18 11.86c0 1.74.46 3.44 1.32 4.94L2 22l5.35-1.4a9.83 9.83 0 0 0 4.69 1.2h.01c5.43 0 9.85-4.42 9.85-9.86A9.79 9.79 0 0 0 12.04 2zm0 17.96h-.01a8.2 8.2 0 0 1-4.17-1.14l-.3-.18-3.17.83.85-3.09-.2-.32a8.14 8.14 0 0 1-1.25-4.35c0-4.52 3.68-8.19 8.2-8.19a8.14 8.14 0 0 1 5.79 2.4 8.1 8.1 0 0 1 2.4 5.8c0 4.52-3.68 8.24-8.14 8.24z" />
+                        </svg>
+                        Confirmar pedido por WhatsApp
                       </a>
                     </div>
                   ) : null}

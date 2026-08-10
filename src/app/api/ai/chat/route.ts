@@ -19,9 +19,23 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const openai = getOpenAIClient();
 
-    const contextNote = currentProductId
-      ? `\n\n[El cliente está viendo el producto con ID: "${currentProductId}"]`
-      : "";
+    // Contexto de sesión: estado del carrito para que el agente razone sobre complementariedad
+    const cartSummary = {
+      items: (cart as CartItem[]).map((i) => ({
+        name: i.product.name,
+        category: i.product.category,
+        quantity: i.quantity,
+      })),
+      total: (cart as CartItem[]).reduce((sum, i) => sum + i.product.price * i.quantity, 0),
+      categoriesInCart: [...new Set((cart as CartItem[]).map((i) => i.product.category))],
+    };
+
+    const sessionContext = {
+      cart: cartSummary,
+      ...(currentProductId ? { currentProduct: { id: currentProductId } } : {}),
+    };
+
+    const contextNote = `\n\n[CONTEXTO DE SESIÓN]\n${JSON.stringify(sessionContext, null, 2)}\n[/CONTEXTO DE SESIÓN]`;
 
     const messages: ChatCompletionMessageParam[] = [
       { role: "system", content: SYSTEM_PROMPT + contextNote },

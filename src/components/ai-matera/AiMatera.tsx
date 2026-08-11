@@ -160,9 +160,14 @@ export function AiMatera() {
         </a>
       ) : (
         <span key={i}>
-          {part.split("\n").flatMap((line, j, arr) =>
-            j < arr.length - 1 ? [line, <br key={j} />] : [line]
-          )}
+          {part.split("\n").flatMap((line, j, arr) => {
+            const segments = line.split(/(\*\*[^*]+\*\*)/).map((seg, k) =>
+              /^\*\*[^*]+\*\*$/.test(seg)
+                ? <strong key={`${i}-${j}-${k}`}>{seg.slice(2, -2)}</strong>
+                : seg.replace(/\*/g, "")
+            );
+            return j < arr.length - 1 ? [...segments, <br key={`br${j}`} />] : segments;
+          })}
         </span>
       )
     );
@@ -303,23 +308,23 @@ export function AiMatera() {
               <div className="flex min-h-0 flex-1 overflow-hidden">
 
                 {/* ── Chat column ── */}
-                <div className={`flex min-h-0 flex-1 flex-col bg-[#f5f0e8] ${activeTab !== "chat" ? "hidden lg:flex" : ""}`}>
+                <div className={`flex min-h-0 min-w-0 flex-1 flex-col bg-[#f5f0e8] ${activeTab !== "chat" ? "hidden lg:flex" : ""}`}>
                   {/* Messages */}
                   <div className="flex-1 overflow-x-hidden overflow-y-auto px-3 py-4 sm:px-5 sm:py-5">
-                    <div className="flex flex-col gap-4">
+                    <div className="flex w-full flex-col gap-4">
                       {messages.map((msg) => (
-                        <div key={msg.id} className={`flex ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                        <div key={msg.id} className={`flex w-full ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
 
                           {/* Assistant */}
                           {msg.role === "assistant" && !msg.isLoading ? (
-                            <div className="flex max-w-[88%] items-end gap-2 sm:max-w-[78%]">
-                              <span className="mb-1 shrink-0 text-lg leading-none" aria-hidden>🧉</span>
-                              <div className="min-w-0 overflow-hidden">
-                                <div className="break-words rounded-2xl rounded-bl-sm bg-white px-4 py-3 text-sm leading-relaxed text-text shadow-sm ring-1 ring-black/[0.04]">
+                            <div className="flex w-full items-start gap-2 sm:max-w-[82%]">
+                              <span className="mt-1 hidden shrink-0 text-lg leading-none sm:block" aria-hidden>🧉</span>
+                              <div className="min-w-0 flex-1 overflow-hidden">
+                                <div className="break-words max-w-[52ch] rounded-2xl rounded-bl-sm bg-white px-3 py-2.5 text-sm leading-relaxed text-text shadow-sm ring-1 ring-black/[0.04] sm:max-w-[56ch] sm:px-4 sm:py-3">
                                   {renderContent(msg.content)}
                                 </div>
                                 {msg.products && msg.products.length > 0 ? (
-                                  <div className="mt-3 flex gap-3 overflow-x-auto pb-3 [scrollbar-color:#b8b2a8_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#b8b2a8]">
+                                  <div className="mt-3 w-full flex gap-3 overflow-x-auto pb-3 [scrollbar-color:#b8b2a8_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#b8b2a8]">
                                     {msg.products.map((product) => (
                                       <AiProductCard
                                         key={product.id}
@@ -409,8 +414,8 @@ export function AiMatera() {
 
                 {/* ── Order panel ── */}
                 <div className={`flex w-full shrink-0 flex-col overflow-hidden bg-white lg:w-72 lg:border-l lg:border-[#e8e2d8] xl:w-80 ${activeTab !== "order" ? "hidden lg:flex" : ""}`}>
-                  <div className="flex shrink-0 items-center justify-between border-b border-[#e8e2d8] px-4 py-3">
-                    <p className="font-serif text-lg font-semibold text-[#20341d]">Tu pedido</p>
+                  <div className="flex shrink-0 items-center justify-between border-b border-[#e8e2d8] px-3 py-2.5">
+                    <p className="font-serif text-base font-semibold text-[#20341d]">Tu pedido</p>
                     {cartCount > 0 ? (
                       <span className="rounded-full bg-[#20341d] px-2.5 py-0.5 text-xs font-bold text-white">
                         {cartCount} {cartCount === 1 ? "item" : "items"}
@@ -418,7 +423,7 @@ export function AiMatera() {
                     ) : null}
                   </div>
 
-                  <div className="flex-1 overflow-x-hidden overflow-y-auto p-4">
+                  <div className="flex-1 overflow-x-hidden overflow-y-auto p-3">
                     {cart.length === 0 ? (
                       <div className="grid h-full place-items-center py-12 text-center">
                         <div>
@@ -430,48 +435,45 @@ export function AiMatera() {
                         </div>
                       </div>
                     ) : (
-                      <div className="space-y-4">
+                      <div className="space-y-2.5">
                         {cart.map((item) => (
-                          <div key={item.product.id} className="flex gap-3 rounded-xl border border-[#ece7de] bg-[#faf7f2] p-3">
-                            <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg bg-secondary/30">
-                              <Image src={item.product.image} alt={item.product.name} fill sizes="56px" className="object-cover" />
+                          <div key={item.product.id} className="flex gap-2 rounded-xl border border-[#ece7de] bg-[#faf7f2] p-2.5">
+                            <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-secondary/30">
+                              <Image src={item.product.image} alt={item.product.name} fill sizes="44px" className="object-cover" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="line-clamp-2 text-xs font-semibold leading-snug text-[#20341d]">{item.product.name}</p>
-                              <p className="mt-0.5 text-[11px] text-muted">{currency.format(item.product.price)} c/u</p>
-                              <div className="mt-2 flex items-center justify-between gap-2">
-                                <div className="inline-flex h-7 items-center rounded-full border border-[#d7d2c7] bg-white text-xs">
+                              <p className="line-clamp-2 text-[11px] font-semibold leading-snug text-[#20341d]">{item.product.name}</p>
+                              <div className="mt-1.5 flex items-center justify-between gap-1">
+                                <div className="inline-flex h-6 items-center rounded-full border border-[#d7d2c7] bg-white text-xs">
                                   <button
                                     type="button"
                                     onClick={() => changeQuantity(item.product.id, -1)}
-                                    className="grid h-full w-7 place-items-center transition hover:text-primary"
+                                    className="grid h-full w-6 place-items-center transition hover:text-primary"
                                     aria-label="Quitar uno"
                                   >
-                                    <Minus size={11} />
+                                    <Minus size={10} />
                                   </button>
-                                  <span className="w-6 text-center font-bold">{item.quantity}</span>
+                                  <span className="w-5 text-center text-[11px] font-bold">{item.quantity}</span>
                                   <button
                                     type="button"
                                     onClick={() => changeQuantity(item.product.id, 1)}
-                                    className="grid h-full w-7 place-items-center transition hover:text-primary"
+                                    className="grid h-full w-6 place-items-center transition hover:text-primary"
                                     aria-label="Agregar uno"
                                   >
-                                    <Plus size={11} />
+                                    <Plus size={10} />
                                   </button>
                                 </div>
+                                <p className="text-xs font-bold text-[#20341d]">{currency.format(item.product.price * item.quantity)}</p>
                                 <button
                                   type="button"
                                   onClick={() => removeFromCart(item.product.id)}
                                   className="text-[10px] font-medium text-muted transition hover:text-red-500"
                                   aria-label={`Quitar ${item.product.name}`}
                                 >
-                                  Eliminar
+                                  ✕
                                 </button>
                               </div>
                             </div>
-                            <p className="shrink-0 text-sm font-bold text-[#20341d]">
-                              {currency.format(item.product.price * item.quantity)}
-                            </p>
                           </div>
                         ))}
                       </div>
@@ -479,7 +481,7 @@ export function AiMatera() {
                   </div>
 
                   {cart.length > 0 ? (
-                    <div className="shrink-0 border-t border-[#e8e2d8] bg-[#faf7f2] p-4">
+                    <div className="shrink-0 border-t border-[#e8e2d8] bg-[#faf7f2] p-3">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-bold uppercase tracking-widest text-muted">Total</span>
                         <strong className="font-serif text-2xl text-[#20341d]">{currency.format(cartTotal)}</strong>

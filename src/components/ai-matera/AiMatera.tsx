@@ -314,12 +314,12 @@ export function AiMatera() {
                           {msg.role === "assistant" && !msg.isLoading ? (
                             <div className="flex max-w-[88%] items-end gap-2 sm:max-w-[78%]">
                               <span className="mb-1 shrink-0 text-lg leading-none" aria-hidden>🧉</span>
-                              <div className="min-w-0">
+                              <div className="min-w-0 overflow-hidden">
                                 <div className="break-words rounded-2xl rounded-bl-sm bg-white px-4 py-3 text-sm leading-relaxed text-text shadow-sm ring-1 ring-black/[0.04]">
                                   {renderContent(msg.content)}
                                 </div>
                                 {msg.products && msg.products.length > 0 ? (
-                                  <div className="mt-3 flex gap-3 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                                  <div className="mt-3 flex gap-3 overflow-x-auto pb-3 [scrollbar-color:#b8b2a8_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#b8b2a8]">
                                     {msg.products.map((product) => (
                                       <AiProductCard
                                         key={product.id}
@@ -362,7 +362,7 @@ export function AiMatera() {
                             </div>
                           ) : (
                             /* User */
-                            <div className="max-w-[80%] sm:max-w-[70%]">
+                            <div className="min-w-0 max-w-[80%] overflow-hidden sm:max-w-[70%]">
                               <div className="break-words rounded-2xl rounded-br-sm bg-[#20341d] px-4 py-3 text-sm leading-relaxed text-white">
                                 {msg.content}
                               </div>
@@ -408,7 +408,7 @@ export function AiMatera() {
                 </div>
 
                 {/* ── Order panel ── */}
-                <div className={`flex w-full shrink-0 flex-col bg-white lg:w-72 lg:border-l lg:border-[#e8e2d8] xl:w-80 ${activeTab !== "order" ? "hidden lg:flex" : ""}`}>
+                <div className={`flex w-full shrink-0 flex-col overflow-hidden bg-white lg:w-72 lg:border-l lg:border-[#e8e2d8] xl:w-80 ${activeTab !== "order" ? "hidden lg:flex" : ""}`}>
                   <div className="flex shrink-0 items-center justify-between border-b border-[#e8e2d8] px-4 py-3">
                     <p className="font-serif text-lg font-semibold text-[#20341d]">Tu pedido</p>
                     {cartCount > 0 ? (
@@ -418,7 +418,7 @@ export function AiMatera() {
                     ) : null}
                   </div>
 
-                  <div className="flex-1 overflow-y-auto p-4">
+                  <div className="flex-1 overflow-x-hidden overflow-y-auto p-4">
                     {cart.length === 0 ? (
                       <div className="grid h-full place-items-center py-12 text-center">
                         <div>

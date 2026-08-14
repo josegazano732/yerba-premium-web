@@ -145,7 +145,6 @@ export function AiMatera() {
   }
 
   function handleAddFromAI(product: Product) {
-    addToCart(product, 1);
     void sendMessage(`Agregá uno de ${product.name} al pedido`);
   }
 

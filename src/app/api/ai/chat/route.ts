@@ -7,6 +7,7 @@ import { executeTool } from "@/lib/ai/execute-tool";
 import type { AiChatRequest, AiChatResponse, CartAction } from "@/lib/ai/types";
 import type { Product } from "@/data/products";
 import type { CartItem } from "@/lib/cart";
+import { site } from "@/data/site";
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   try {
@@ -25,6 +26,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         name: i.product.name,
         category: i.product.category,
         quantity: i.quantity,
+        unitPrice: i.product.price,
       })),
       total: (cart as CartItem[]).reduce((sum, i) => sum + i.product.price * i.quantity, 0),
       categoriesInCart: [...new Set((cart as CartItem[]).map((i) => i.product.category))],
@@ -32,6 +34,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const sessionContext = {
       cart: cartSummary,
+      whatsappUrl: `https://wa.me/${site.whatsappNumber}`,
       ...(currentProductId ? { currentProduct: { id: currentProductId } } : {}),
     };
 
@@ -39,7 +42,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const messages: ChatCompletionMessageParam[] = [
       { role: "system", content: SYSTEM_PROMPT + contextNote },
-      ...history.slice(-12).map((m): ChatCompletionMessageParam => ({ role: m.role, content: m.content })),
+      ...history.slice(-16).map((m): ChatCompletionMessageParam => ({ role: m.role, content: m.content })),
       { role: "user", content: message }
     ];
 
@@ -51,7 +54,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       messages,
       tools: AI_TOOLS,
       tool_choice: "auto",
-      temperature: 0.7,
+      temperature: 0.5,
       max_tokens: 800
     });
 
@@ -89,7 +92,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
         messages,
         tools: AI_TOOLS,
         tool_choice: "auto",
-        temperature: 0.7,
+        temperature: 0.5,
         max_tokens: 800
       });
     }

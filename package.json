@@ -12,6 +12,7 @@
   "dependencies": {
     "@hookform/resolvers": "^5.2.2",
     "@supabase/supabase-js": "^2.111.0",
+    "@vercel/analytics": "^2.0.1",
     "framer-motion": "^12.23.24",
     "jspdf": "^4.2.1",
     "lucide-react": "^0.468.0",

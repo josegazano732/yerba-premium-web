@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/Header";
 import { WhatsappFab } from "@/components/layout/WhatsappFab";
 import { AiMatera } from "@/components/ai-matera/AiMatera";
 import { CartProvider } from "@/lib/cart-context";
+import { Analytics } from "@vercel/analytics/next";
 import "./globals.css";
 
 const manrope = Manrope({ subsets: ["latin"], variable: "--font-manrope" });
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <Footer />
           <WhatsappFab />
           <AiMatera />
+          <Analytics />
         </CartProvider>
       </body>
     </html>

@@ -176,10 +176,10 @@ export function AiMatera() {
     <>
       {/* FAB Agente Matero */}
       <motion.div
-        className="fixed bottom-[88px] right-4 z-[90] sm:bottom-28 sm:right-6"
-        initial={{ opacity: 0, x: 40 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ delay: 1.2, duration: 0.5, ease: [0.32, 0.72, 0, 1] }}
+        className="fixed bottom-[88px] right-4 z-[100] sm:bottom-28 sm:right-6"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.8, duration: 0.4 }}
       >
         {[0, 1].map((i) => (
           <motion.span
@@ -322,18 +322,24 @@ export function AiMatera() {
                                 <div className="break-words max-w-[52ch] rounded-2xl rounded-bl-sm bg-white px-3 py-2.5 text-sm leading-relaxed text-text shadow-sm ring-1 ring-black/[0.04] sm:max-w-[56ch] sm:px-4 sm:py-3">
                                   {renderContent(msg.content)}
                                 </div>
-                                {msg.products && msg.products.length > 0 ? (
-                                  <div className="mt-3 w-full flex gap-3 overflow-x-auto pb-3 [scrollbar-color:#b8b2a8_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#b8b2a8]">
-                                    {msg.products.map((product) => (
-                                      <AiProductCard
-                                        key={product.id}
-                                        product={product}
-                                        onAdd={handleAddFromAI}
-                                        isAdded={cart.some((item) => item.product.id === product.id)}
-                                      />
-                                    ))}
-                                  </div>
-                                ) : null}
+                                {(() => {
+                                  const lower = msg.content.toLowerCase();
+                                  const visible = (msg.products ?? []).filter((p) =>
+                                    lower.includes(p.name.toLowerCase())
+                                  );
+                                  return visible.length > 0 ? (
+                                    <div className="mt-3 w-full flex gap-3 overflow-x-auto pb-3 [scrollbar-color:#b8b2a8_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#b8b2a8]">
+                                      {visible.map((product) => (
+                                        <AiProductCard
+                                          key={product.id}
+                                          product={product}
+                                          onAdd={handleAddFromAI}
+                                          isAdded={cart.some((item) => item.product.id === product.id)}
+                                        />
+                                      ))}
+                                    </div>
+                                  ) : null;
+                                })()}
                                 {msg.quickReplies && msg.quickReplies.length > 0 ? (
                                   <div className="mt-2.5 flex flex-wrap gap-2">
                                     {msg.quickReplies.map((reply) => (

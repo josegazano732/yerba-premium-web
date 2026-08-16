@@ -8,9 +8,8 @@ import { Container } from "@/components/ui/Container";
 import { useCatalog } from "@/lib/useCatalog";
 
 const fallbackImages = [
-  "https://images.unsplash.com/photo-1516824711718-9c1e683412ac?auto=format&fit=crop&w=1100&q=85",
-  "https://images.unsplash.com/photo-1571068316344-75bc76f77890?auto=format&fit=crop&w=600&q=80",
-  "https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=600&q=80"
+  "",
+
 ];
 
 function listCategories(names: string[]) {

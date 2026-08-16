@@ -33,13 +33,13 @@ const visualFallbackCards = [
   {
     id: "fallback-mates",
     name: "Mates",
-    image: "https://images.unsplash.com/photo-1571934811356-5cc061b6821f?auto=format&fit=crop&w=900&q=80",
+    image: "",
     href: "/productos#Mates"
   },
   {
     id: "fallback-termos",
     name: "Termos",
-    image: "https://images.unsplash.com/photo-1544145945-f90425340c7e?auto=format&fit=crop&w=900&q=80",
+    image: "",
     href: "/productos#Termos"
   }
 ];
@@ -240,14 +240,16 @@ export function Header() {
                             onClick={() => setIsProductsOpen(false)}
                             className="group relative overflow-hidden rounded-[28px] bg-[#eadfcd] shadow-[0_18px_40px_rgba(32,52,29,0.08)]"
                           >
-                            <div className="relative aspect-square">
-                              <Image
-                                src={product.image}
-                                alt={product.name}
-                                fill
-                                sizes="(max-width: 640px) 50vw, 240px"
-                                className="object-cover transition duration-700 group-hover:scale-105"
-                              />
+                            <div className="relative aspect-square overflow-hidden bg-[#d8cfc0]">
+                              {product.image ? (
+                                <Image
+                                  src={product.image}
+                                  alt={product.name}
+                                  fill
+                                  sizes="(max-width: 640px) 50vw, 240px"
+                                  className="object-cover transition duration-700 group-hover:scale-105"
+                                />
+                              ) : null}
                             </div>
                           </Link>
                         ))}

@@ -35,7 +35,7 @@ export function HeroSection() {
           <div className="absolute inset-x-8 bottom-0 h-4/5 rounded-t-full bg-secondary" />
           <div className="absolute left-0 top-12 h-28 w-28 rounded-full bg-accent/20" />
           <Image
-            src="https://images.unsplash.com/photo-1615485737457-f07082c77813?auto=format&fit=crop&w=1200&q=90"
+            src=""
             alt="Packshot de yerba mate premium"
             fill
             priority

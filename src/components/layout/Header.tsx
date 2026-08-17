@@ -10,6 +10,7 @@ import { Container } from "@/components/ui/Container";
 import { FREE_SHIPPING_THRESHOLD } from "@/lib/shipping";
 import { useCatalog } from "@/lib/useCatalog";
 import { formatPrice } from "@/lib/utils";
+import { categoryUrl } from "@/lib/seo";
 import { site } from "@/data/site";
 import { MobileMenu } from "./MobileMenu";
 
@@ -25,7 +26,7 @@ const FEATURED_CATEGORIES = ["Mates", "Termos", "Bombillas", "Materas"];
 
 const fallbackSections = ["Mates", "Termos", "Bombillas"].map((name) => ({
   title: name,
-  href: `/productos#${encodeURIComponent(name)}`,
+  href: categoryUrl(name),
   count: 0
 }));
 
@@ -34,13 +35,13 @@ const visualFallbackCards = [
     id: "fallback-mates",
     name: "Mates",
     image: "",
-    href: "/productos#Mates"
+    href: categoryUrl("Mates")
   },
   {
     id: "fallback-termos",
     name: "Termos",
     image: "",
-    href: "/productos#Termos"
+    href: categoryUrl("Termos")
   }
 ];
 
@@ -80,7 +81,7 @@ export function Header() {
 
     return rankedCategories.slice(0, 5).map((category) => ({
       title: category.name,
-      href: `/productos#${encodeURIComponent(category.name)}`,
+      href: categoryUrl(category.name),
       count: category.count
     }));
   }, [rankedCategories]);
@@ -96,7 +97,7 @@ export function Header() {
       id: category.name,
       name: category.name,
       image: category.image as string,
-      href: `/productos#${encodeURIComponent(category.name)}`
+      href: categoryUrl(category.name)
     }));
   }, [rankedCategories]);
 

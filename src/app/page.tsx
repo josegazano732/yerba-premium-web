@@ -1,31 +1,24 @@
+import type { Metadata } from "next";
 import { HeroBanner } from "@/components/home/HeroBanner";
 import { ProductMarquee } from "@/components/home/ProductMarquee";
 import { PromoBanner } from "@/components/home/PromoBanner";
 import { FeaturedProducts } from "@/components/products/FeaturedProducts";
 import { site } from "@/data/site";
+import { buildOrganizationSchema, buildStoreSchema, buildWebSiteSchema } from "@/lib/seo";
 
-const storeSchema = {
-  "@context": "https://schema.org",
-  "@type": "Store",
-  name: "Yerba Libre",
-  description: "Tienda online de mates, termos, bombillas, yerbas y accesorios materos con envio a todo el pais.",
-  currenciesAccepted: "ARS",
-  paymentAccepted: "Efectivo, Transferencia, Tarjeta de credito",
-  areaServed: "AR"
-};
-
-const organizationSchema = {
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  name: "Yerba Libre",
-  sameAs: [site.instagramUrl]
+export const metadata: Metadata = {
+  title: `${site.name} | Mates, Termos, Bombillas y Accesorios`,
+  description:
+    "Descubrí la tienda online de Mate Tierra: mates artesanales, termos, bombillas, yerberas y kits materos con envíos a todo el país desde Misiones.",
+  alternates: { canonical: site.baseUrl }
 };
 
 export default function Home() {
   return (
     <main>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(storeSchema) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationSchema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(buildStoreSchema()) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(buildOrganizationSchema()) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(buildWebSiteSchema()) }} />
       <HeroBanner />
       <FeaturedProducts />
       <PromoBanner />

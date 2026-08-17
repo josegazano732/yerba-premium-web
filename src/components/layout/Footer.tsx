@@ -4,6 +4,7 @@ import { Instagram, Mail, Music2 } from "lucide-react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
 import { site } from "@/data/site";
+import { categoryUrl } from "@/lib/seo";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Container } from "@/components/ui/Container";
 
@@ -28,9 +29,9 @@ const columns = [
     title: "Comprar",
     links: [
       { label: "Todos los productos", href: "/productos", external: false },
-      { label: "Mates", href: "/productos#Mates", external: false },
-      { label: "Termos", href: "/productos#Termos", external: false },
-      { label: "Bombillas", href: "/productos#Bombillas", external: false }
+      { label: "Mates", href: categoryUrl("Mates"), external: false },
+      { label: "Termos", href: categoryUrl("Termos"), external: false },
+      { label: "Bombillas", href: categoryUrl("Bombillas"), external: false }
     ]
   },
   {

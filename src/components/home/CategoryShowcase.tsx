@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Container } from "@/components/ui/Container";
 import { useCatalog } from "@/lib/useCatalog";
+import { categoryUrl } from "@/lib/seo";
 
 const CATEGORY_ORDER = ["Mates", "Termos", "Bombillas", "Yerberas", "Materas", "Combos Ofertas"];
 
@@ -98,7 +99,7 @@ export function CategoryShowcase() {
               : cards.map((card) => (
                   <Link
                     key={card.name}
-                    href={`/productos#${encodeURIComponent(card.name)}`}
+                    href={categoryUrl(card.name)}
                     className="group flex w-[60vw] shrink-0 snap-start flex-col overflow-hidden rounded-[8px] bg-white/70 ring-1 ring-primary/10 transition duration-300 hover:ring-primary/40 focus:outline-none focus:ring-2 focus:ring-accent sm:w-[15rem]"
                   >
                     <div className="relative aspect-square overflow-hidden bg-secondary/20">

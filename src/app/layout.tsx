@@ -14,6 +14,10 @@ const cormorant = Cormorant_Garamond({ subsets: ["latin"], variable: "--font-cor
 
 export const metadata: Metadata = {
   metadataBase: new URL(site.baseUrl),
+
+  verification: {
+    google: "google8e897a09c7d350b2.html"
+  },
   title: {
     default: `${site.name} | Mates, Termos, Bombillas y Accesorios`,
     template: `%s | ${site.name}`

@@ -28,7 +28,7 @@ export function BrandLogo() {
   return (
     <Image
       src={source}
-      alt="Amate toda la vida"
+      alt="Mate Tierra"
       width={640}
       height={196}
       priority

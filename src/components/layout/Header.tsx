@@ -124,7 +124,7 @@ export function Header() {
   }, []);
 
   return (
-    <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl">
+    <header className="fixed inset-x-0 top-0 z-[90] bg-background/95 backdrop-blur-xl">
       <div className="relative overflow-hidden border-y border-primary/15">
         <div className="grain pointer-events-none absolute inset-0 opacity-70" aria-hidden />
         <motion.div

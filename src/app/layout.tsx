@@ -55,6 +55,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body>
         <CartProvider>
           <Header />
+          <div aria-hidden className="h-[7rem] sm:h-[7.5rem]" />
           {children}
           <Footer />
           <WhatsappFab />

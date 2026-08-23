@@ -3,7 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, Filter, Minus, Phone, Plus, Search, ShoppingBag, SlidersHorizontal, Truck, X } from "lucide-react";
 import Image from "next/image";
-import { startTransition, useDeferredValue, useEffect, useState } from "react";
+import { startTransition, useDeferredValue, useEffect, useRef, useState } from "react";
 import { mapProductDetails, Product, ProductDetailsRow, products as fallbackProducts } from "@/data/products";
 import { site } from "@/data/site";
 import { FREE_SHIPPING_THRESHOLD, getShippingQuotes, isValidPostalCode, ShippingQuote } from "@/lib/shipping";
@@ -47,7 +47,16 @@ export function ProductGrid() {
   const [catalogError, setCatalogError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(24);
+  const resultsRef = useRef<HTMLDivElement>(null);
   const deferredQuery = useDeferredValue(query.trim().toLowerCase());
+
+  function handleCategorySelect(nextCategory: string) {
+    setCategory(nextCategory);
+    setIsFilterOpen(false);
+    requestAnimationFrame(() => {
+      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
 
   useEffect(() => {
     if (!supabase) {
@@ -272,7 +281,7 @@ export function ProductGrid() {
         </div>
       </div>
 
-      <div className="mb-5 flex items-center justify-between gap-4">
+      <div ref={resultsRef} className="mb-5 flex items-center justify-between gap-4">
         <div>
           <p className="text-sm text-muted"><strong className="text-text">{visibleProducts.length}</strong> productos</p>
           {catalogError ? <p className="mt-1 text-xs text-muted">Mostrando catálogo de respaldo.</p> : null}
@@ -436,7 +445,7 @@ export function ProductGrid() {
                       <li key={item}>
                         <button
                           type="button"
-                          onClick={() => setCategory(item)}
+                          onClick={() => handleCategorySelect(item)}
                           aria-pressed={category === item}
                           className={`text-left text-sm transition hover:text-[#d7e68c] ${category === item ? "font-bold text-[#d7e68c]" : "text-white/85"}`}
                         >

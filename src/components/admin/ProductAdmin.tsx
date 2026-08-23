@@ -166,9 +166,8 @@ export function ProductAdmin() {
     const urls: string[] = [];
 
     for (const [index, image] of productImages.entries()) {
-      const extension = image.name.split(".").pop()?.toLowerCase() || "webp";
-      const path = `${group}_${index + 1}.${extension}`;
-      const { error } = await supabase.storage.from("products").upload(path, image, { contentType: image.type, upsert: false });
+      const path = `${group}_${index + 1}.webp`;
+      const { error } = await supabase.storage.from("products").upload(path, image, { contentType: "image/webp", upsert: false });
       if (error) {
         if (paths.length > 0) await supabase.storage.from("products").remove(paths);
         throw error;
@@ -299,7 +298,7 @@ export function ProductAdmin() {
           pathFor={promoBannerPath}
           urlFor={promoBannerUrl}
           slotLabel="Banner promocional"
-          hint="Recomendado: 1400 x 770 px, PNG/JPG/WebP, máximo 6 MB."
+          hint="Recomendado: 1400 x 770 px, PNG/JPG/WebP, máximo 6 MB. Se convierte automáticamente a WebP."
         />
 
         <section className="mt-6 border border-[#d9dcd3] bg-white">
@@ -347,6 +346,48 @@ function unitOptionsFor(value: string) {
     : [...UNIT_OPTIONS, { value, label: value }];
 }
 
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+async function convertImageToWebp(file: File): Promise<File> {
+  const sourceUrl = URL.createObjectURL(file);
+  try {
+    const image = await loadImage(sourceUrl);
+    const canvas = document.createElement("canvas");
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("No se pudo inicializar el procesador de imágenes.");
+    context.drawImage(image, 0, 0);
+
+    const blob = await canvasToWebpBlob(canvas, 0.9);
+    const baseName = file.name.replace(/\.[^.]+$/, "").trim() || "imagen";
+    return new File([blob], `${baseName}.webp`, { type: "image/webp", lastModified: Date.now() });
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
+
+async function loadImage(sourceUrl: string): Promise<HTMLImageElement> {
+  return await new Promise((resolve, reject) => {
+    const image = new window.Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("No pudimos leer una de las imágenes seleccionadas."));
+    image.src = sourceUrl;
+  });
+}
+
+async function canvasToWebpBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
+  return await new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error("No se pudo convertir la imagen a WebP."));
+        return;
+      }
+      resolve(blob);
+    }, "image/webp", quality);
+  });
+}
+
 function ProductImagePicker({ files, existingImages, onChange }: Readonly<{ files: File[]; existingImages: string[]; onChange: (files: File[]) => void }>) {
   const [previews, setPreviews] = useState<string[]>([]);
   const [error, setError] = useState("");
@@ -357,7 +398,7 @@ function ProductImagePicker({ files, existingImages, onChange }: Readonly<{ file
     return () => nextPreviews.forEach((preview) => URL.revokeObjectURL(preview));
   }, [files]);
 
-  function selectImages(event: ChangeEvent<HTMLInputElement>) {
+  async function selectImages(event: ChangeEvent<HTMLInputElement>) {
     const selected = Array.from(event.target.files ?? []);
     setError("");
     if (selected.length === 0) return;
@@ -371,12 +412,25 @@ function ProductImagePicker({ files, existingImages, onChange }: Readonly<{ file
       event.target.value = "";
       return;
     }
-    if (selected.some((file) => file.size > 5 * 1024 * 1024)) {
+    if (selected.some((file) => file.size > MAX_IMAGE_BYTES)) {
       setError("Cada foto debe pesar menos de 5 MB.");
       event.target.value = "";
       return;
     }
-    onChange([...files, ...selected]);
+    let converted: File[] = [];
+    try {
+      converted = await Promise.all(selected.map(convertImageToWebp));
+    } catch (conversionError) {
+      setError(conversionError instanceof Error ? conversionError.message : "No se pudieron convertir las imágenes a WebP.");
+      event.target.value = "";
+      return;
+    }
+    if (converted.some((file) => file.size > MAX_IMAGE_BYTES)) {
+      setError("Luego de convertir a WebP, cada foto debe pesar menos de 5 MB.");
+      event.target.value = "";
+      return;
+    }
+    onChange([...files, ...converted]);
     event.target.value = "";
   }
 
@@ -395,7 +449,7 @@ function ProductImagePicker({ files, existingImages, onChange }: Readonly<{ file
         ))}
         {files.length < 3 ? <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-2 border border-dashed border-[#aeb5aa] bg-[#fafaf7] text-center text-xs font-bold text-[#385133] hover:border-primary"><Plus size={22} /> Adjuntar fotos<input type="file" multiple accept="image/png,image/jpeg,image/webp" onChange={selectImages} className="sr-only" /></label> : null}
       </div>
-      <p className="mt-2 text-xs text-muted">De 1 a 3 fotos. PNG, JPG o WebP, hasta 5 MB cada una. La primera será la portada.</p>
+      <p className="mt-2 text-xs text-muted">De 1 a 3 fotos. PNG, JPG o WebP, hasta 5 MB cada una. Se convierten automáticamente a WebP. La primera será la portada.</p>
       {error ? <p role="alert" className="mt-2 text-sm font-semibold text-red-700">{error}</p> : null}
     </fieldset>
   );

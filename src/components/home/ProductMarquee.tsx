@@ -12,7 +12,15 @@ const fallbackImages = [
   "https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=600&q=70"
 ];
 
-const ALLOWED_CATEGORIES = ["Termos", "Mates", "Materas", "Calcomanias", "Bombillas"];
+const STICKERS_CATEGORY_ALIASES = ["calcomanias", "stickers"];
+
+function normalizeCategory(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
 
 export function ProductMarquee() {
   const { products } = useCatalog();
@@ -22,25 +30,23 @@ export function ProductMarquee() {
       return fallbackImages.map((image, index) => ({ id: `fallback-${index}`, name: "Yerba Libre", image }));
     }
 
-    const filtered = products.filter((p) => ALLOWED_CATEGORIES.includes(p.category));
+    const filtered = products.filter((product) => {
+      const category = normalizeCategory(product.category);
+      return STICKERS_CATEGORY_ALIASES.some((alias) => category.includes(alias));
+    });
 
-    const byCategory = new Map<string, typeof products>();
-    for (const product of filtered) {
-      const bucket = byCategory.get(product.category) ?? [];
-      bucket.push(product);
-      byCategory.set(product.category, bucket);
+    if (filtered.length === 0) {
+      return fallbackImages.map((image, index) => ({ id: `fallback-${index}`, name: "Calcomanias / Stickers", image }));
     }
 
-    // Intercala categorias para que la cinta muestre imagenes variadas.
-    const buckets = Array.from(byCategory.values());
-    const mixed: typeof products = [];
-    for (let round = 0; mixed.length < 16; round += 1) {
-      const added = buckets.filter((bucket) => bucket[round]).map((bucket) => bucket[round]);
-      if (added.length === 0) break;
-      mixed.push(...added);
-    }
-
-    return mixed.slice(0, 16).map((product) => ({ id: product.id, name: product.name, image: product.image }));
+    return filtered.flatMap((product) => {
+      const gallery = product.images?.length ? product.images : [product.image];
+      return gallery.map((image, index) => ({
+        id: `${product.id}-${index}`,
+        name: product.name,
+        image
+      }));
+    });
   }, [products]);
 
   const loop = [...items, ...items];

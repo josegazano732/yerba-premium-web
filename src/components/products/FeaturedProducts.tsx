@@ -95,7 +95,7 @@ export function FeaturedProducts() {
             <h2 className="mt-4 font-serif text-3xl text-[#20341d] sm:text-4xl">Favoritos de la comunidad matera</h2>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="hidden items-center gap-3 sm:flex">
             <button
               type="button"
               onClick={() => scrollByCard(-1)}
@@ -121,17 +121,17 @@ export function FeaturedProducts() {
           onMouseLeave={() => setIsPaused(false)}
           onFocusCapture={() => setIsPaused(true)}
           onBlurCapture={() => setIsPaused(false)}
-          className="no-scrollbar mt-10 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth pb-2"
+          className="no-scrollbar mt-8 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-1 pb-2 sm:mt-10 sm:px-0"
         >
           {isLoading
             ? Array.from({ length: 4 }).map((_, index) => (
                 <div
                   key={index}
-                  className="h-[26rem] w-[16rem] shrink-0 animate-pulse snap-start rounded-[8px] bg-secondary/40 sm:w-[18rem]"
+                  className="h-[24rem] w-[82vw] max-w-[20rem] shrink-0 animate-pulse snap-start rounded-[8px] bg-secondary/40 sm:h-[26rem] sm:w-[18rem] sm:max-w-none"
                 />
               ))
             : selection.map((product) => (
-                <div key={product.id} className="w-[16rem] shrink-0 snap-start sm:w-[18rem]">
+                <div key={product.id} className="w-[82vw] max-w-[20rem] shrink-0 snap-start sm:w-[18rem] sm:max-w-none">
                   <ProductCard product={product} />
                 </div>
               ))}

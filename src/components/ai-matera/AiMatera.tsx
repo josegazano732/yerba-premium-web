@@ -176,7 +176,7 @@ export function AiMatera() {
     <>
       {/* FAB Agente Matero */}
       <motion.div
-        className="fixed bottom-[88px] right-4 z-[100] sm:bottom-28 sm:right-6"
+        className="fixed bottom-[96px] right-3 z-[130] sm:bottom-28 sm:right-6"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ delay: 0.8, duration: 0.4 }}
@@ -194,11 +194,11 @@ export function AiMatera() {
           type="button"
           onClick={() => setIsOpen(true)}
           aria-label="Abrir Agente Matero"
-          className="relative flex items-center gap-2 rounded-full bg-[#20341d] py-3 pl-3.5 pr-4 text-white shadow-[0_8px_32px_rgba(32,52,29,0.45)] ring-1 ring-white/10 transition-all hover:scale-105 hover:shadow-[0_12px_40px_rgba(32,52,29,0.55)] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 active:scale-95"
+          className="relative flex h-14 w-14 items-center justify-center rounded-full bg-[#20341d] p-0 text-white shadow-[0_8px_32px_rgba(32,52,29,0.45)] ring-1 ring-white/10 transition-all hover:scale-105 hover:shadow-[0_12px_40px_rgba(32,52,29,0.55)] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 active:scale-95 sm:h-auto sm:w-auto sm:gap-2 sm:py-3 sm:pl-3.5 sm:pr-4"
         >
           <span className="text-xl leading-none" aria-hidden>🧉</span>
-          <span className="text-[13px] font-bold tracking-wide">Agente Matero</span>
-          <span className="relative flex h-2.5 w-2.5" aria-hidden>
+          <span className="hidden text-[13px] font-bold tracking-wide sm:inline">Agente Matero</span>
+          <span className="hidden h-2.5 w-2.5 sm:relative sm:flex" aria-hidden>
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#4ade80] opacity-75" />
             <span className="relative h-2.5 w-2.5 rounded-full bg-[#4ade80]" />
           </span>

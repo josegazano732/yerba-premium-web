@@ -34,7 +34,7 @@ export function AdminHeroBanner({
   pathFor = bannerPath,
   urlFor = bannerUrl,
   slotLabel = "Banner",
-  hint = "Recomendado: 2000 x 1100 px, PNG/JPG/WebP, máximo 6 MB."
+  hint = "Recomendado: 2000 x 1100 px, PNG/JPG/WebP, máximo 6 MB. Se convierte automáticamente a WebP."
 }: AdminHeroBannerProps) {
   const [slotStates, setSlots] = useState<Record<number, SlotState>>(() =>
     slots.reduce((accumulator, slot) => {
@@ -50,7 +50,7 @@ export function AdminHeroBanner({
     setSlots((current) => ({ ...current, [slot]: { ...current[slot], ...changes } }));
   }
 
-  function selectFile(slot: number, event: ChangeEvent<HTMLInputElement>) {
+  async function selectFile(slot: number, event: ChangeEvent<HTMLInputElement>) {
     const selectedFile = event.target.files?.[0] ?? null;
     setMessage("");
     setIsError(false);
@@ -67,8 +67,24 @@ export function AdminHeroBanner({
       event.target.value = "";
       return;
     }
+    let convertedFile: File;
+    try {
+      convertedFile = await convertImageToWebp(selectedFile);
+    } catch (error) {
+      setIsError(true);
+      setMessage(error instanceof Error ? error.message : "No se pudo convertir la imagen a WebP.");
+      event.target.value = "";
+      return;
+    }
+    if (convertedFile.size > maxFileSize) {
+      setIsError(true);
+      setMessage("Luego de convertir a WebP, la imagen debe pesar menos de 6 MB.");
+      event.target.value = "";
+      return;
+    }
     setMissing((current) => current.filter((item) => item !== slot));
-    updateSlot(slot, { file: selectedFile, preview: URL.createObjectURL(selectedFile) });
+    updateSlot(slot, { file: convertedFile, preview: URL.createObjectURL(convertedFile) });
+    event.target.value = "";
   }
 
   async function uploadBanner(slot: number) {
@@ -80,7 +96,7 @@ export function AdminHeroBanner({
 
     const { error } = await supabase.storage.from("products").upload(pathFor(slot), state.file, {
       cacheControl: "0",
-      contentType: state.file.type,
+      contentType: "image/webp",
       upsert: true
     });
 
@@ -188,4 +204,44 @@ export function AdminHeroBanner({
       <p className="px-5 pb-5 text-xs text-muted">{hint}</p>
     </section>
   );
+}
+
+async function convertImageToWebp(file: File): Promise<File> {
+  const sourceUrl = URL.createObjectURL(file);
+  try {
+    const image = await loadImage(sourceUrl);
+    const canvas = document.createElement("canvas");
+    canvas.width = image.naturalWidth;
+    canvas.height = image.naturalHeight;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("No se pudo inicializar el procesador de imágenes.");
+    context.drawImage(image, 0, 0);
+
+    const blob = await canvasToWebpBlob(canvas, 0.9);
+    const baseName = file.name.replace(/\.[^.]+$/, "").trim() || "banner";
+    return new File([blob], `${baseName}.webp`, { type: "image/webp", lastModified: Date.now() });
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
+
+async function loadImage(sourceUrl: string): Promise<HTMLImageElement> {
+  return await new Promise((resolve, reject) => {
+    const image = new window.Image();
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error("No pudimos leer la imagen seleccionada."));
+    image.src = sourceUrl;
+  });
+}
+
+async function canvasToWebpBlob(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
+  return await new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error("No se pudo convertir la imagen a WebP."));
+        return;
+      }
+      resolve(blob);
+    }, "image/webp", quality);
+  });
 }

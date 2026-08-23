@@ -13,6 +13,24 @@ type CartContextValue = {
 
 const CartContext = createContext<CartContextValue | null>(null);
 
+function isCartItemArray(value: unknown): value is CartItem[] {
+  if (!Array.isArray(value)) return false;
+
+  return value.every((item) => {
+    if (!item || typeof item !== "object") return false;
+    const candidate = item as { quantity?: unknown; product?: unknown };
+    if (typeof candidate.quantity !== "number" || !Number.isFinite(candidate.quantity) || candidate.quantity <= 0) return false;
+    if (!candidate.product || typeof candidate.product !== "object") return false;
+    const product = candidate.product as { id?: unknown; name?: unknown; price?: unknown; image?: unknown; category?: unknown };
+    return typeof product.id === "string"
+      && typeof product.name === "string"
+      && typeof product.price === "number"
+      && Number.isFinite(product.price)
+      && typeof product.image === "string"
+      && typeof product.category === "string";
+  });
+}
+
 export function CartProvider({ children }: Readonly<{ children: React.ReactNode }>) {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
@@ -20,9 +38,17 @@ export function CartProvider({ children }: Readonly<{ children: React.ReactNode 
   useEffect(() => {
     try {
       const saved = localStorage.getItem(CART_STORAGE_KEY);
-      if (saved) setCart(JSON.parse(saved) as CartItem[]);
+      if (saved) {
+        const parsed = JSON.parse(saved) as unknown;
+        if (isCartItemArray(parsed)) {
+          setCart(parsed);
+        } else {
+          localStorage.removeItem(CART_STORAGE_KEY);
+        }
+      }
     } catch {
       // localStorage no disponible o dato corrupto
+      localStorage.removeItem(CART_STORAGE_KEY);
     }
     setHydrated(true);
   }, []);

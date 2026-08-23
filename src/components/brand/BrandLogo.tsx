@@ -33,7 +33,7 @@ export function BrandLogo() {
       height={196}
       priority
       onError={() => setSource(fallbackLogo)}
-      className="h-11 w-auto max-w-[185px] object-contain sm:h-12 sm:max-w-[230px] lg:h-14 lg:max-w-[260px]"
+      className="h-9 w-auto max-w-[150px] object-contain sm:h-12 sm:max-w-[230px] lg:h-14 lg:max-w-[260px]"
     />
   );
 }

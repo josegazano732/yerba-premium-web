@@ -19,7 +19,7 @@ export function MobileMenu({ onNavigate }: Readonly<{ onNavigate: () => void }>)
       initial={{ opacity: 0, y: -8 }}
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -8 }}
-      className="absolute left-4 right-4 top-[72px] rounded-[8px] border border-primary/10 bg-white p-4 shadow-2xl lg:hidden"
+      className="absolute left-4 right-4 top-[106px] rounded-[8px] border border-primary/10 bg-white p-4 shadow-2xl lg:hidden"
     >
       <nav className="grid gap-1">
         {navItems.map((item) => (

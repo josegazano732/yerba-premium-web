@@ -127,8 +127,11 @@ export function Header() {
     <header className="fixed inset-x-0 top-0 z-[90] bg-background/95 backdrop-blur-xl">
       <div className="relative overflow-hidden border-y border-primary/15">
         <div className="grain pointer-events-none absolute inset-0 opacity-70" aria-hidden />
+        <div className="relative flex items-center justify-center px-4 py-2.5 text-center lg:hidden">
+          <span className="text-xs font-semibold tracking-wide text-forest/80 sm:text-sm">{announcements[0]}</span>
+        </div>
         <motion.div
-          className="relative flex w-max items-center gap-12 py-2.5"
+          className="relative hidden w-max items-center gap-12 py-2.5 lg:flex"
           animate={{ x: ["0%", "-50%"] }}
           transition={{ duration: 32, ease: "linear", repeat: Infinity }}
         >
@@ -144,8 +147,8 @@ export function Header() {
         </motion.div>
       </div>
 
-      <Container className="relative z-20 grid h-20 grid-cols-[1fr_auto_1fr] items-center gap-4">
-        <div className="flex items-center">
+      <Container className="relative z-20 flex h-20 items-center justify-center lg:grid lg:grid-cols-[1fr_auto_1fr] lg:gap-4">
+        <div className="absolute left-4 top-1/2 flex min-w-11 -translate-y-1/2 items-center lg:static lg:min-w-0 lg:translate-y-0">
           <button
             type="button"
             className="grid h-11 w-11 place-items-center rounded-full text-forest transition hover:bg-primary/10 lg:hidden"
@@ -281,10 +284,10 @@ export function Header() {
           <BrandLogo />
         </Link>
 
-        <div className="flex items-center justify-end gap-1 sm:gap-2">
+        <div className="absolute right-4 top-1/2 flex min-w-11 -translate-y-1/2 items-center justify-end gap-1 sm:gap-2 lg:static lg:min-w-0 lg:translate-y-0">
           <Link
             href="/productos"
-            className="grid h-11 w-11 place-items-center rounded-full text-forest transition hover:bg-primary/10 hover:text-primary"
+            className="hidden h-11 w-11 place-items-center rounded-full text-forest transition hover:bg-primary/10 hover:text-primary sm:grid"
             aria-label="Buscar productos"
           >
             <Search size={20} />

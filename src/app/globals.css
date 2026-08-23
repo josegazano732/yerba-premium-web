@@ -68,6 +68,11 @@ body[data-ai-open="true"] #whatsapp-fab {
   display: none;
 }
 
+/* Oculta Agente Matero mientras el carrito está abierto */
+body[data-cart-open="true"] #ai-matera-fab {
+  display: none;
+}
+
 ::selection {
   background: var(--secondary);
   color: var(--text);

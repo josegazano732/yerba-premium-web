@@ -176,6 +176,7 @@ export function AiMatera() {
     <>
       {/* FAB Agente Matero */}
       <motion.div
+        id="ai-matera-fab"
         className="fixed bottom-[96px] right-3 z-[130] sm:bottom-28 sm:right-6"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}

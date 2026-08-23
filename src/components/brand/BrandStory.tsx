@@ -8,15 +8,10 @@ import { Container } from "@/components/ui/Container";
 import { useCatalog } from "@/lib/useCatalog";
 
 const fallbackImages = [
-  "",
-
+  "https://images.unsplash.com/photo-1615485737457-f07082c77813?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1523920290228-4f321a939b4c?auto=format&fit=crop&w=900&q=80",
+  "https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=900&q=80"
 ];
-
-function listCategories(names: string[]) {
-  if (names.length === 0) return "mates, termos, bombillas y accesorios";
-  if (names.length === 1) return names[0].toLowerCase();
-  return `${names.slice(0, -1).join(", ").toLowerCase()} y ${names[names.length - 1].toLowerCase()}`;
-}
 
 export function BrandStory() {
   const { products, isLoading } = useCatalog();
@@ -48,9 +43,13 @@ export function BrandStory() {
       if (picks.length === 3) break;
     }
 
+    const gallery = [...picks, ...fallbackImages]
+      .filter((source, index, all) => source.trim().length > 0 && all.indexOf(source) === index)
+      .slice(0, 3);
+
     return {
       topCategories: ranked.slice(0, 4),
-      gallery: picks.length === 3 ? picks : fallbackImages,
+      gallery,
       totalStock: products.reduce((accumulator, product) => accumulator + Math.max(product.stock, 0), 0)
     };
   }, [products]);

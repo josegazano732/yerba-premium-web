@@ -10,8 +10,8 @@ import { site } from "@/data/site";
 import { supabase } from "@/lib/supabase";
 
 /** `grams: null` = producto que se vende por unidad, no fraccionado. */
-type Presentation = { grams: number | null; label: string };
-type OrderLine = { key: string; product: Product; grams: number | null; quantity: number };
+type Presentation = { grams: number | null; label: string; customUnit?: boolean };
+type OrderLine = { key: string; product: Product; grams: number | null; quantity: number; customUnit: boolean };
 
 const PRESENTATIONS: Presentation[] = [
   { grams: 1000, label: "1000 g" },
@@ -20,6 +20,9 @@ const PRESENTATIONS: Presentation[] = [
 ];
 
 const UNIT_PRESENTATION: Presentation[] = [{ grams: null, label: "Por unidad" }];
+const CUSTOM_GRAMS_MIN = 20;
+const CUSTOM_GRAMS_MAX = 100;
+const CUSTOM_UNIT_PRICE_MULTIPLIER = 1.5;
 
 /** Descripcion generica que agrega `mapProductDetails` cuando el producto no tiene texto propio. */
 const GENERIC_DESCRIPTION = "Producto seleccionado de nuestra tienda.";
@@ -50,13 +53,21 @@ function presentationsFor(product: Product) {
   return isSoldByWeight(product) ? PRESENTATIONS : UNIT_PRESENTATION;
 }
 
-function lineKey(productId: string, grams: number | null) {
-  return `${productId}-${grams ?? "unidad"}`;
+function lineKey(productId: string, grams: number | null, customUnit = false) {
+  return `${productId}-${grams ?? "unidad"}-${customUnit ? "custom" : "std"}`;
 }
 
 /** Los precios de los productos por peso estan cargados por kilo. */
-function priceFor(product: Product, grams: number | null) {
-  return grams === null ? product.price : (product.price * grams) / 1000;
+function priceFor(product: Product, grams: number | null, customUnit = false) {
+  if (grams === null) return product.price;
+  const basePrice = (product.price * grams) / 1000;
+  return customUnit ? basePrice * CUSTOM_UNIT_PRICE_MULTIPLIER : basePrice;
+}
+
+function normalizeCustomGrams(raw: string) {
+  const parsed = Number.parseInt(raw, 10);
+  if (!Number.isFinite(parsed)) return CUSTOM_GRAMS_MIN;
+  return Math.min(CUSTOM_GRAMS_MAX, Math.max(CUSTOM_GRAMS_MIN, parsed));
 }
 
 export function WholesaleCatalog() {
@@ -67,6 +78,7 @@ export function WholesaleCatalog() {
   const [loadError, setLoadError] = useState("");
   const [query, setQuery] = useState("");
   const [order, setOrder] = useState<OrderLine[]>([]);
+  const [customGramsByProduct, setCustomGramsByProduct] = useState<Record<string, string>>({});
   const [isOrderOpen, setIsOrderOpen] = useState(false);
   const orderSaveMounted = useRef(false);
 
@@ -74,7 +86,22 @@ export function WholesaleCatalog() {
   useEffect(() => {
     try {
       const saved = localStorage.getItem("mate-tierra-wholesale-order");
-      if (saved) setOrder(JSON.parse(saved) as OrderLine[]);
+      if (saved) {
+        const parsed = JSON.parse(saved) as Array<Omit<OrderLine, "key" | "customUnit"> & { key?: string; customUnit?: boolean }>;
+        const restored = Array.isArray(parsed)
+          ? parsed
+              .filter((line) => line?.product?.id && typeof line.quantity === "number" && line.quantity > 0)
+              .map((line) => {
+                const customUnit = Boolean(line.customUnit);
+                return {
+                  ...line,
+                  key: lineKey(line.product.id, line.grams, customUnit),
+                  customUnit
+                };
+              })
+          : [];
+        setOrder(restored);
+      }
     } catch {
       // localStorage corrupto o no disponible
     }
@@ -94,7 +121,7 @@ export function WholesaleCatalog() {
   }, [order]);
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [pdfError, setPdfError] = useState("");
-  const [addedLine, setAddedLine] = useState<{ product: Product; grams: number | null; label: string } | null>(null);
+  const [addedLine, setAddedLine] = useState<{ product: Product; grams: number | null; customUnit: boolean; label: string } | null>(null);
 
   useEffect(() => {
     if (!addedLine) return;
@@ -164,21 +191,21 @@ export function WholesaleCatalog() {
 
   const totalUnits = order.reduce((total, line) => total + line.quantity, 0);
   const totalGrams = order.reduce((total, line) => total + (line.grams ?? 0) * line.quantity, 0);
-  const orderTotal = order.reduce((total, line) => total + priceFor(line.product, line.grams) * line.quantity, 0);
+  const orderTotal = order.reduce((total, line) => total + priceFor(line.product, line.grams, line.customUnit) * line.quantity, 0);
 
   const quantities = useMemo(
     () => new Map(order.map((line) => [line.key, line.quantity] as const)),
     [order]
   );
 
-  function setQuantity(product: Product, grams: number | null, nextQuantity: number) {
-    const key = lineKey(product.id, grams);
+  function setQuantity(product: Product, grams: number | null, nextQuantity: number, customUnit = false) {
+    const key = lineKey(product.id, grams, customUnit);
     setOrder((current) => {
       if (nextQuantity <= 0) return current.filter((line) => line.key !== key);
       if (current.some((line) => line.key === key)) {
         return current.map((line) => (line.key === key ? { ...line, quantity: nextQuantity } : line));
       }
-      return [...current, { key, product, grams, quantity: nextQuantity }];
+      return [...current, { key, product, grams, quantity: nextQuantity, customUnit }];
     });
   }
 
@@ -199,7 +226,7 @@ export function WholesaleCatalog() {
       await downloadCatalogPdf({
         title: activeCatalog.title,
         intro:
-          "Venta exclusiva mayorista. Las hierbas a granel se fraccionan en 1000 g, 500 g y 250 g; el resto se vende por unidad. Coordinamos disponibilidad, condiciones y envio por WhatsApp.",
+          "Venta exclusiva mayorista. Las hierbas a granel se fraccionan en 1000 g, 500 g y 250 g. Tambien podes definir una unidad personalizada entre 20 g y 100 g; el resto se vende por unidad. Coordinamos disponibilidad, condiciones y envio por WhatsApp.",
         fileName: `lista-precios-${activeCatalog.id}.pdf`,
         items: visibleProducts.map((product) => ({
           name: product.name,
@@ -225,7 +252,7 @@ export function WholesaleCatalog() {
   function buildWhatsappLink() {
     const lines = order.map(
       (line, index) =>
-        `${index + 1}) ${line.product.name} - ${line.grams === null ? "por unidad" : `${line.grams} g`}\n   ${line.quantity} x ${currency.format(priceFor(line.product, line.grams))} = ${currency.format(priceFor(line.product, line.grams) * line.quantity)}`
+        `${index + 1}) ${line.product.name} - ${line.grams === null ? "por unidad" : line.customUnit ? `${line.grams} g personalizado` : `${line.grams} g`}\n   ${line.quantity} x ${currency.format(priceFor(line.product, line.grams, line.customUnit))} = ${currency.format(priceFor(line.product, line.grams, line.customUnit) * line.quantity)}`
     );
 
     const message = [
@@ -252,7 +279,8 @@ export function WholesaleCatalog() {
         <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-primary">Venta mayorista</p>
         <h1 className="mt-2 font-serif text-4xl font-semibold text-[#20341d] sm:text-5xl">Catalogos</h1>
         <p className="mt-3 max-w-2xl text-sm leading-6 text-muted">
-          Elegi un catalogo para armar tu pedido mayorista. Las hierbas a granel se fraccionan en 1000 g, 500 g y 250 g.
+          Elegi un catalogo para armar tu pedido mayorista. Las hierbas a granel se fraccionan en 1000 g, 500 g, 250 g o en
+          unidad personalizada de 20 g a 100 g.
         </p>
 
         <div className="mt-10 grid gap-5 sm:grid-cols-2">
@@ -313,8 +341,8 @@ export function WholesaleCatalog() {
             <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-primary">Venta mayorista</p>
             <h1 className="mt-2 font-serif text-4xl font-semibold text-[#20341d]">{activeCatalog.title}</h1>
             <p className="mt-2 max-w-xl text-sm leading-6 text-muted">
-              Las hierbas a granel se piden en 1000 g, 500 g o 250 g; el resto por unidad. Armas el pedido y nos lo envias por
-              WhatsApp.
+              Las hierbas a granel se piden en 1000 g, 500 g o 250 g. Tambien podes definir una unidad personalizada entre 20 g
+              y 100 g; el resto por unidad. Armas el pedido y nos lo envias por WhatsApp.
             </p>
           </div>
 
@@ -360,13 +388,19 @@ export function WholesaleCatalog() {
 
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {visibleProducts.map((product, index) => {
-            const presentations = presentationsFor(product);
             const byWeight = isSoldByWeight(product);
+            const basePresentations = presentationsFor(product);
+            const customGramsInput = customGramsByProduct[product.id] ?? String(CUSTOM_GRAMS_MIN);
+            const customGrams = normalizeCustomGrams(customGramsInput);
+            const presentations = byWeight
+              ? [...basePresentations, { grams: customGrams, label: `${customGrams} g personalizado`, customUnit: true }]
+              : basePresentations;
             const isUnit = !byWeight;
             const productSubtotal = presentations.reduce(
               (total, presentation) =>
                 total +
-                priceFor(product, presentation.grams) * (quantities.get(lineKey(product.id, presentation.grams)) ?? 0),
+                priceFor(product, presentation.grams, presentation.customUnit === true) *
+                  (quantities.get(lineKey(product.id, presentation.grams, presentation.customUnit === true)) ?? 0),
               0
             );
             return (
@@ -409,14 +443,41 @@ export function WholesaleCatalog() {
 
                     <fieldset className="mt-4">
                       <legend className="text-xs font-bold uppercase tracking-wide text-muted">
-                        {byWeight ? "Elegi cuantos paquetes de cada tamano" : "Elegi cuantas unidades"}
+                        {byWeight ? "Elegi cuantos paquetes de cada tamano o defini tu propia unidad" : "Elegi cuantas unidades"}
                       </legend>
                       <div className="mt-2 space-y-2">
+                        {byWeight ? (
+                          <div className="rounded-[8px] border border-[#e2e0d8] bg-white px-3 py-2">
+                            <label htmlFor={`custom-grams-${product.id}`} className="text-xs font-semibold text-muted">
+                              Unidad personalizada ({CUSTOM_GRAMS_MIN} g a {CUSTOM_GRAMS_MAX} g)
+                            </label>
+                            <div className="mt-1.5 flex items-center gap-2">
+                              <input
+                                id={`custom-grams-${product.id}`}
+                                type="number"
+                                min={CUSTOM_GRAMS_MIN}
+                                max={CUSTOM_GRAMS_MAX}
+                                value={customGramsInput}
+                                onChange={(event) =>
+                                  setCustomGramsByProduct((current) => ({ ...current, [product.id]: event.target.value }))
+                                }
+                                onBlur={() =>
+                                  setCustomGramsByProduct((current) => ({
+                                    ...current,
+                                    [product.id]: String(normalizeCustomGrams(current[product.id] ?? String(CUSTOM_GRAMS_MIN)))
+                                  }))
+                                }
+                                className="h-9 w-24 rounded-full border border-[#d7d2c7] bg-white px-3 text-sm font-bold text-[#20341d] outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                              />
+                              <span className="text-xs font-semibold text-[#8a6a1a]">Precio especial por unidad personalizada</span>
+                            </div>
+                          </div>
+                        ) : null}
                         {presentations.map((presentation) => {
-                          const quantity = quantities.get(lineKey(product.id, presentation.grams)) ?? 0;
+                          const quantity = quantities.get(lineKey(product.id, presentation.grams, presentation.customUnit === true)) ?? 0;
                           return (
                             <div
-                              key={presentation.label}
+                              key={`${presentation.grams ?? "unidad"}-${presentation.customUnit ? "custom" : "std"}`}
                               className={`flex items-center justify-between gap-3 rounded-[8px] border px-3 py-2 transition ${
                                 quantity > 0 ? "border-[#20341d] bg-[#20341d]/5" : "border-[#e2e0d8] bg-white"
                               }`}
@@ -424,7 +485,7 @@ export function WholesaleCatalog() {
                               <div className="min-w-0">
                                 <p className="text-sm font-bold text-[#20341d]">{presentation.label}</p>
                                 <p className="text-xs font-semibold text-muted">
-                                  {currency.format(priceFor(product, presentation.grams))} c/u
+                                  {currency.format(priceFor(product, presentation.grams, presentation.customUnit === true))} c/u
                                 </p>
                               </div>
 
@@ -432,7 +493,7 @@ export function WholesaleCatalog() {
                                 <div className="flex items-center gap-1.5">
                                   <button
                                     type="button"
-                                    onClick={() => setQuantity(product, presentation.grams, quantity - 1)}
+                                    onClick={() => setQuantity(product, presentation.grams, quantity - 1, presentation.customUnit === true)}
                                     className="grid h-9 w-9 place-items-center rounded-full border border-[#d7d2c7] bg-white transition hover:border-primary"
                                     aria-label={`Quitar ${presentation.label} de ${product.name}`}
                                   >
@@ -446,7 +507,7 @@ export function WholesaleCatalog() {
                                   </span>
                                   <button
                                     type="button"
-                                    onClick={() => setQuantity(product, presentation.grams, quantity + 1)}
+                                    onClick={() => setQuantity(product, presentation.grams, quantity + 1, presentation.customUnit === true)}
                                     className="grid h-9 w-9 place-items-center rounded-full bg-[#20341d] text-white transition hover:bg-primary"
                                     aria-label={`Agregar ${presentation.label} de ${product.name}`}
                                   >
@@ -457,8 +518,13 @@ export function WholesaleCatalog() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setQuantity(product, presentation.grams, 1);
-                                    setAddedLine({ product, grams: presentation.grams, label: presentation.label });
+                                    setQuantity(product, presentation.grams, 1, presentation.customUnit === true);
+                                    setAddedLine({
+                                      product,
+                                      grams: presentation.grams,
+                                      customUnit: presentation.customUnit === true,
+                                      label: presentation.label
+                                    });
                                   }}
                                   className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[#20341d] px-3.5 text-xs font-bold text-[#20341d] transition hover:bg-[#20341d] hover:text-white"
                                   aria-label={`Agregar ${presentation.label} de ${product.name}`}
@@ -511,7 +577,7 @@ export function WholesaleCatalog() {
               type="button"
               aria-label="Cerrar pedido"
               onClick={() => setIsOrderOpen(false)}
-              className="fixed inset-0 z-[60] cursor-default bg-[#11180f]/50"
+              className="fixed inset-0 z-[100] cursor-default bg-[#11180f]/50"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -524,7 +590,7 @@ export function WholesaleCatalog() {
               animate={{ x: 0 }}
               exit={{ x: "100%" }}
               transition={{ type: "spring", damping: 30, stiffness: 250 }}
-              className="fixed inset-y-0 right-0 z-[70] flex w-full max-w-md flex-col bg-white shadow-2xl"
+              className="fixed inset-y-0 right-0 z-[110] flex w-full max-w-md flex-col bg-white shadow-2xl"
             >
               <div className="flex items-center justify-between border-b border-[#e0e2dc] px-5 py-5">
                 <h2 className="font-serif text-2xl font-semibold text-[#20341d]">Pedido mayorista</h2>
@@ -551,8 +617,8 @@ export function WholesaleCatalog() {
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-bold text-[#20341d]">{line.product.name}</p>
                           <p className="text-xs font-semibold text-muted">
-                            {line.grams === null ? "Por unidad" : `${line.grams} g`} ·{" "}
-                            {currency.format(priceFor(line.product, line.grams))}
+                            {line.grams === null ? "Por unidad" : line.customUnit ? `${line.grams} g personalizado` : `${line.grams} g`} ·{" "}
+                            {currency.format(priceFor(line.product, line.grams, line.customUnit))}
                           </p>
                           <div className="mt-2 flex items-center gap-2">
                             <button
@@ -627,12 +693,12 @@ export function WholesaleCatalog() {
               type="button"
               aria-label="Cerrar aviso"
               onClick={() => setAddedLine(null)}
-              className="fixed inset-0 z-[80] cursor-default bg-[#11180f]/40 backdrop-blur-sm"
+              className="fixed inset-0 z-[120] cursor-default bg-[#11180f]/40 backdrop-blur-sm"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
             />
-            <div className="pointer-events-none fixed inset-0 z-[90] grid place-items-center p-4">
+            <div className="pointer-events-none fixed inset-0 z-[130] grid place-items-center p-4">
               <motion.div
                 role="status"
                 aria-live="polite"
@@ -660,7 +726,7 @@ export function WholesaleCatalog() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-[#20341d]">{addedLine.product.name}</p>
                     <p className="mt-0.5 text-xs text-muted">
-                      {addedLine.label} &middot; {currency.format(priceFor(addedLine.product, addedLine.grams))}
+                      {addedLine.label} &middot; {currency.format(priceFor(addedLine.product, addedLine.grams, addedLine.customUnit))}
                     </p>
                   </div>
                 </div>

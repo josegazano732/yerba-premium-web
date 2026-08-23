@@ -143,6 +143,13 @@ export function ProductGrid() {
   }, [isFilterOpen]);
 
   useEffect(() => {
+    document.body.dataset.cartOpen = isCartOpen ? "true" : "";
+    return () => {
+      document.body.dataset.cartOpen = "";
+    };
+  }, [isCartOpen]);
+
+  useEffect(() => {
     if (!addedProduct) return;
 
     function handleKeyDown(event: KeyboardEvent) {
@@ -504,8 +511,8 @@ export function ProductGrid() {
       <AnimatePresence>
         {isCartOpen ? (
           <>
-            <motion.button type="button" aria-label="Cerrar carrito" onClick={() => setIsCartOpen(false)} className="fixed inset-0 z-[60] cursor-default bg-[#11180f]/45 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
-            <motion.aside role="dialog" aria-modal="true" aria-label="Carrito de compras" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 28, stiffness: 240 }} className="fixed inset-y-0 right-0 z-[70] flex w-full max-w-md flex-col bg-[#fffdf8] shadow-2xl">
+            <motion.button type="button" aria-label="Cerrar carrito" onClick={() => setIsCartOpen(false)} className="fixed inset-0 z-[100] cursor-default bg-[#11180f]/45 backdrop-blur-sm" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} />
+            <motion.aside role="dialog" aria-modal="true" aria-label="Carrito de compras" initial={{ x: "100%" }} animate={{ x: 0 }} exit={{ x: "100%" }} transition={{ type: "spring", damping: 28, stiffness: 240 }} className="fixed inset-y-0 right-0 z-[110] flex w-full max-w-md flex-col bg-[#fffdf8] shadow-2xl">
               <div className="flex h-20 items-center justify-between border-b border-[#ddd8ce] px-5 sm:px-7">
                 <h2 className="font-serif text-xl font-semibold uppercase tracking-[0.08em] text-[#20341d]">Carrito de compras</h2>
                 <button type="button" onClick={() => setIsCartOpen(false)} className="grid h-10 w-10 place-items-center rounded-full border border-[#d7d2c7] transition hover:border-primary" aria-label="Cerrar carrito"><X size={19} /></button>

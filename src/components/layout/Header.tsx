@@ -7,9 +7,7 @@ import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Container } from "@/components/ui/Container";
-import { FREE_SHIPPING_THRESHOLD } from "@/lib/shipping";
 import { useCatalog } from "@/lib/useCatalog";
-import { formatPrice } from "@/lib/utils";
 import { categoryUrl } from "@/lib/seo";
 import { site } from "@/data/site";
 import { MobileMenu } from "./MobileMenu";
@@ -46,15 +44,15 @@ const visualFallbackCards = [
 ];
 
 const announcements = [
-  "Envios a todo el pais",
-  `Envio gratis superando los ${formatPrice(FREE_SHIPPING_THRESHOLD)}`
+  { icon: "🚚", text: "Envío GRATIS a partir de $100.000" },
+  { icon: "🎁", text: "Superando los $50.000 ¡tenés un regalo!" }
 ];
 
 export function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [isProductsOpen, setIsProductsOpen] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
   const productsMenuRef = useRef<HTMLDivElement | null>(null);
-  const announcementLoop = Array.from({ length: 6 }).flatMap(() => announcements);
   const { products, categories } = useCatalog();
 
   const rankedCategories = useMemo(() => {
@@ -123,25 +121,37 @@ export function Header() {
     };
   }, []);
 
+  useEffect(() => {
+    function handleScroll() {
+      setIsScrolled(window.scrollY > 8);
+    }
+
+    handleScroll();
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
+
   return (
-    <header className="fixed inset-x-0 top-0 z-[90] bg-background/95 backdrop-blur-xl">
-      <div className="relative hidden overflow-hidden border-y border-primary/15 lg:block">
-        <div className="grain pointer-events-none absolute inset-0 opacity-70" aria-hidden />
-        <motion.div
-          className="relative flex w-max items-center gap-12 py-2.5"
-          animate={{ x: ["0%", "-50%"] }}
-          transition={{ duration: 32, ease: "linear", repeat: Infinity }}
-        >
-          {announcementLoop.map((message, index) => (
-            <span
-              key={`${message}-${index}`}
-              aria-hidden={index >= announcements.length}
-              className="whitespace-nowrap text-xs font-semibold tracking-wide text-forest/80 sm:text-sm"
-            >
-              {message}
-            </span>
+    <header
+      className={`fixed inset-x-0 top-0 z-[90] backdrop-blur-xl transition-[background-color,box-shadow] duration-300 ${
+        isScrolled
+          ? "bg-background shadow-[0_12px_32px_-16px_rgba(32,52,29,0.2)]"
+          : "bg-background/95 shadow-none"
+      }`}
+    >
+      <div className="cosmic-announcement-bar">
+        <div className="announcement-track">
+          {[0, 1].map((copy) => (
+            <div key={copy} aria-hidden={copy === 1} className="announcement-copy">
+              {announcements.map((item) => (
+                <div key={item.text} className="announcement-item">
+                  <span aria-hidden="true">{item.icon}</span>
+                  <span>{item.text}</span>
+                </div>
+              ))}
+            </div>
           ))}
-        </motion.div>
+        </div>
       </div>
 
       <Container className="relative z-20 grid h-20 grid-cols-[44px_1fr_96px] items-center gap-2 sm:grid-cols-[44px_1fr_132px] lg:grid-cols-[1fr_auto_1fr] lg:gap-4">

@@ -87,6 +87,94 @@ body[data-cart-open="true"] #ai-matera-fab {
   background-size: 18px 18px;
 }
 
+/* Barra de anuncios (marquesina continua) */
+.cosmic-announcement-bar {
+  background-color: var(--background);
+  color: var(--forest);
+  font-size: 0.85rem;
+  font-weight: 600;
+  height: 38px;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  position: relative;
+  letter-spacing: 0.03em;
+  border-bottom: 1px solid rgba(32, 52, 29, 0.1);
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 12%,
+    #000 88%,
+    transparent
+  );
+  mask-image: linear-gradient(
+    to right,
+    transparent,
+    #000 12%,
+    #000 88%,
+    transparent
+  );
+}
+
+.announcement-track {
+  display: flex;
+  width: max-content;
+  animation: marqueeScroll 25s linear infinite;
+}
+
+.announcement-copy {
+  display: flex;
+  align-items: center;
+  gap: 3rem;
+}
+
+.announcement-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+.announcement-item span {
+  opacity: 0.95;
+}
+
+@keyframes marqueeScroll {
+  0% {
+    transform: translateX(0);
+  }
+  100% {
+    transform: translateX(-50%);
+  }
+}
+
+.cosmic-announcement-bar:hover .announcement-track,
+.cosmic-announcement-bar:focus-within .announcement-track {
+  animation-play-state: paused;
+}
+
+@media (max-width: 768px) {
+  .cosmic-announcement-bar {
+    font-size: 0.75rem;
+    height: 32px;
+  }
+  .announcement-track {
+    animation-duration: 18s;
+  }
+  .announcement-copy {
+    gap: 2rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .announcement-track {
+    animation: none;
+  }
+}
+
 .section-pad {
   padding-block: clamp(4rem, 8vw, 7rem);
 }

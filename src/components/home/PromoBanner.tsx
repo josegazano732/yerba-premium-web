@@ -62,7 +62,7 @@ export function PromoBanner() {
     >
       <Container className="max-w-[92rem]">
         <header className="mb-8 text-center sm:mb-10">
-          <div className="mx-auto max-w-4xl rounded-2xl border border-[#6c8e37]/30 bg-[#fffdf8]/95 px-5 py-6 shadow-[0_12px_35px_rgba(32,52,29,0.16)] backdrop-blur-md sm:px-10 sm:py-8">
+          <div className="mx-auto max-w-4xl overflow-hidden rounded-[1.75rem] border border-white/60 bg-gradient-to-b from-[#fffdf8] to-[#f6f2e7] px-5 py-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_16px_40px_-12px_rgba(32,52,29,0.18),0_4px_12px_rgba(32,52,29,0.08)] ring-1 ring-[#6c8e37]/10 backdrop-blur-md sm:px-10 sm:py-8">
             <div className="inline-flex items-center gap-2 rounded-full border border-[#6c8e37]/35 bg-[#edf3df] px-4 py-1.5">
               <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[#41621f]" />
               <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#28431e]">Categoria destacada</p>

@@ -67,10 +67,10 @@ export function PromoBanner() {
               <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[#41621f]" />
               <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#28431e]">Categoria destacada</p>
             </div>
-            <h2 className="mx-auto mt-4 max-w-3xl text-balance font-serif text-3xl font-semibold leading-tight text-[#172116] sm:text-5xl">
+            <h2 className="mx-auto mt-4 hidden max-w-3xl text-balance font-serif text-3xl font-semibold leading-tight text-[#172116] sm:block sm:text-5xl">
               Stickers y calcomanias premium
             </h2>
-            <p className="mx-auto mt-4 max-w-3xl text-pretty text-sm font-medium leading-6 text-[#30472c] sm:text-base sm:leading-7">
+            <p className="mx-auto mt-4 hidden max-w-3xl text-pretty text-sm font-medium leading-6 text-[#30472c] sm:block sm:text-base sm:leading-7">
               Disenos exclusivos para personalizar mates, termos y accesorios con una identidad natural, premium y profesional.
             </p>
           </div>
@@ -123,7 +123,7 @@ export function PromoBanner() {
             </div>
 
             {secondaryImages.length > 0 ? (
-              <div className="rounded-[14px] border border-primary/15 bg-white/35 p-2.5 backdrop-blur-[1px] sm:p-3 lg:col-span-3">
+              <div className="hidden rounded-[14px] border border-primary/15 bg-white/35 p-2.5 backdrop-blur-[1px] sm:block sm:p-3 lg:col-span-3">
                 <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-primary/80">Mas stickers</p>
                 <div className="grid grid-cols-2 gap-3">
                   {secondaryImages.map((source, index) => (

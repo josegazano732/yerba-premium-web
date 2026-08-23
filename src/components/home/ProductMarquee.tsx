@@ -52,9 +52,13 @@ export function ProductMarquee() {
   const loop = [...items, ...items];
 
   return (
-    <section className="overflow-hidden border-y border-primary/10 bg-white/70 py-8" aria-label="Galeria de productos">
+    <section
+      className="relative isolate max-w-full overflow-x-clip border-y border-primary/10 bg-white/70 py-8"
+      style={{ contain: "inline-size" }}
+      aria-label="Galeria de productos"
+    >
       <motion.div
-        className="flex w-max gap-4 sm:gap-6"
+        className="flex w-max will-change-transform gap-4 sm:gap-6"
         animate={{ x: ["0%", "-50%"] }}
         transition={{ duration: Math.max(28, items.length * 3.5), ease: "linear", repeat: Infinity }}
       >

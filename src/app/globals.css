@@ -48,6 +48,10 @@ body {
   font-family: var(--font-manrope), sans-serif;
 }
 
+.home-page {
+  overflow-x: clip;
+}
+
 /* Debe ir en @layer base: sin capa, `a { color: inherit }` gana sobre utilidades como text-white. */
 @layer base {
   a {

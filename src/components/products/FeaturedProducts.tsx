@@ -121,7 +121,8 @@ export function FeaturedProducts() {
           onMouseLeave={() => setIsPaused(false)}
           onFocusCapture={() => setIsPaused(true)}
           onBlurCapture={() => setIsPaused(false)}
-          className="no-scrollbar mt-8 flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-1 pb-2 sm:mt-10 sm:px-0"
+          className="no-scrollbar mt-8 max-w-full min-w-0 [contain:inline-size] flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-1 pb-2 sm:mt-10 sm:px-0"
+          style={{ contain: "layout paint" }}
         >
           {isLoading
             ? Array.from({ length: 4 }).map((_, index) => (

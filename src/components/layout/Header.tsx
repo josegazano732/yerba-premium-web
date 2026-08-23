@@ -125,13 +125,10 @@ export function Header() {
 
   return (
     <header className="fixed inset-x-0 top-0 z-[90] bg-background/95 backdrop-blur-xl">
-      <div className="relative overflow-hidden border-y border-primary/15">
+      <div className="relative hidden overflow-hidden border-y border-primary/15 lg:block">
         <div className="grain pointer-events-none absolute inset-0 opacity-70" aria-hidden />
-        <div className="relative flex items-center justify-center px-4 py-2.5 text-center lg:hidden">
-          <span className="text-xs font-semibold tracking-wide text-forest/80 sm:text-sm">{announcements[0]}</span>
-        </div>
         <motion.div
-          className="relative hidden w-max items-center gap-12 py-2.5 lg:flex"
+          className="relative flex w-max items-center gap-12 py-2.5"
           animate={{ x: ["0%", "-50%"] }}
           transition={{ duration: 32, ease: "linear", repeat: Infinity }}
         >
@@ -147,8 +144,8 @@ export function Header() {
         </motion.div>
       </div>
 
-      <Container className="relative z-20 flex h-20 items-center justify-center lg:grid lg:grid-cols-[1fr_auto_1fr] lg:gap-4">
-        <div className="absolute left-4 top-1/2 flex min-w-11 -translate-y-1/2 items-center lg:static lg:min-w-0 lg:translate-y-0">
+      <Container className="relative z-20 grid h-20 grid-cols-[44px_1fr_96px] items-center gap-2 sm:grid-cols-[44px_1fr_132px] lg:grid-cols-[1fr_auto_1fr] lg:gap-4">
+        <div className="flex w-11 items-center justify-start lg:w-auto">
           <button
             type="button"
             className="grid h-11 w-11 place-items-center rounded-full text-forest transition hover:bg-primary/10 lg:hidden"
@@ -280,14 +277,14 @@ export function Header() {
           </nav>
         </div>
 
-        <Link href="/" className="flex items-center justify-center" aria-label="Inicio">
+        <Link href="/" className="justify-self-center" aria-label="Inicio">
           <BrandLogo />
         </Link>
 
-        <div className="absolute right-4 top-1/2 flex min-w-11 -translate-y-1/2 items-center justify-end gap-1 sm:gap-2 lg:static lg:min-w-0 lg:translate-y-0">
+        <div className="flex w-[96px] items-center justify-end gap-1 sm:w-[132px] sm:gap-2 lg:w-auto">
           <Link
             href="/productos"
-            className="hidden h-11 w-11 place-items-center rounded-full text-forest transition hover:bg-primary/10 hover:text-primary sm:grid"
+            className="grid h-11 w-11 place-items-center rounded-full text-forest transition hover:bg-primary/10 hover:text-primary"
             aria-label="Buscar productos"
           >
             <Search size={20} />

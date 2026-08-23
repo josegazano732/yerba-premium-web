@@ -62,16 +62,18 @@ export function PromoBanner() {
     >
       <Container className="max-w-[92rem]">
         <header className="mb-8 text-center sm:mb-10">
-          <div className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-white/55 px-4 py-1.5 backdrop-blur-[1px]">
-            <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-primary/70" />
-            <p className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary/85">Categoria destacada</p>
+          <div className="mx-auto max-w-4xl rounded-2xl border border-[#6c8e37]/30 bg-[#fffdf8]/95 px-5 py-6 shadow-[0_12px_35px_rgba(32,52,29,0.16)] backdrop-blur-md sm:px-10 sm:py-8">
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#6c8e37]/35 bg-[#edf3df] px-4 py-1.5">
+              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[#41621f]" />
+              <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#28431e]">Categoria destacada</p>
+            </div>
+            <h2 className="mx-auto mt-4 max-w-3xl text-balance font-serif text-3xl font-semibold leading-tight text-[#172116] sm:text-5xl">
+              Stickers y calcomanias premium
+            </h2>
+            <p className="mx-auto mt-4 max-w-3xl text-pretty text-sm font-medium leading-6 text-[#30472c] sm:text-base sm:leading-7">
+              Disenos exclusivos para personalizar mates, termos y accesorios con una identidad natural, premium y profesional.
+            </p>
           </div>
-          <h2 className="mx-auto mt-4 max-w-3xl text-balance font-serif text-2xl leading-tight text-[#1f341b] sm:text-5xl">
-            Stickers y calcomanias premium
-          </h2>
-          <p className="mx-auto mt-4 max-w-3xl text-pretty text-sm leading-6 text-[#365032] sm:text-base sm:leading-7">
-            Disenos exclusivos para personalizar mates, termos y accesorios con una identidad natural, premium y profesional.
-          </p>
         </header>
 
         <Link

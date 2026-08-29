@@ -320,3 +320,269 @@ export async function downloadCatalogPdf({ title, intro, items, fileName }: Cata
 
   doc.save(fileName);
 }
+
+export type OrderPdfLine = {
+  name: string;
+  image: string;
+  presentation: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+};
+
+export type OrderPdfOptions = {
+  title: string;
+  lines: OrderPdfLine[];
+  totalUnits: number;
+  totalKilograms?: number;
+  total: number;
+  fileName: string;
+};
+
+/** Genera el detalle del pedido mayorista con el mismo formato visual de la lista de precios. */
+export async function downloadOrderPdf({
+  title,
+  lines,
+  totalUnits,
+  totalKilograms = 0,
+  total,
+  fileName
+}: OrderPdfOptions) {
+  const { jsPDF } = await import("jspdf");
+  const doc = new jsPDF({ unit: "mm", format: "a4", compress: true });
+
+  const [logo, images] = await Promise.all([
+    loadLogo(),
+    Promise.all(lines.map((line) => toJpegDataUrl(line.image)))
+  ]);
+
+  const today = new Intl.DateTimeFormat("es-AR", { day: "2-digit", month: "long", year: "numeric" }).format(new Date());
+
+  const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2;
+  const colProduct = MARGIN;
+  const colPresentation = 92;
+  const colQuantity = 126;
+  const colUnit = 144;
+  const colSubtotal = 170;
+  const colEnd = PAGE_WIDTH - MARGIN;
+
+  const ROW_H = 14;
+  const HEADER_ROW_H = 6;
+  const TABLE_TOP_FIRST = 61;
+  const TABLE_TOP_OTHER = 34;
+
+  function drawHeader(isFirstPage: boolean) {
+    const logoHeight = isFirstPage ? 15 : 9;
+    const baseLine = isFirstPage ? 38 : 24;
+
+    doc.setFillColor(...CREAM);
+    doc.rect(0, 0, PAGE_WIDTH, baseLine, "F");
+
+    if (logo) {
+      doc.addImage(logo.dataUrl, "PNG", MARGIN, isFirstPage ? 11 : 7.5, logoHeight * logo.ratio, logoHeight);
+    } else {
+      doc.setFont("times", "bold");
+      doc.setFontSize(isFirstPage ? 20 : 13);
+      doc.setTextColor(...PRIMARY);
+      doc.text("Mate Tierra", MARGIN, isFirstPage ? 22 : 15);
+    }
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(isFirstPage ? 7.5 : 6.5);
+    doc.setTextColor(...PRIMARY);
+    doc.text("DETALLE DE PEDIDO MAYORISTA", PAGE_WIDTH - MARGIN, isFirstPage ? 15 : 12, { align: "right" });
+
+    doc.setFont("times", "bold");
+    doc.setFontSize(isFirstPage ? 17 : 12);
+    doc.setTextColor(...FOREST);
+    doc.text(title, PAGE_WIDTH - MARGIN, isFirstPage ? 23.5 : 18, { align: "right" });
+
+    if (isFirstPage) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(...MUTED);
+      doc.text(`Emitido el ${today}`, PAGE_WIDTH - MARGIN, 30, { align: "right" });
+    }
+
+    doc.setDrawColor(...PRIMARY);
+    doc.setLineWidth(0.7);
+    doc.line(0, baseLine, PAGE_WIDTH, baseLine);
+  }
+
+  function drawFooter() {
+    doc.setDrawColor(...BORDER);
+    doc.setLineWidth(0.3);
+    doc.line(MARGIN, FOOTER_TOP, PAGE_WIDTH - MARGIN, FOOTER_TOP);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...FOREST);
+    doc.text(`WhatsApp ${site.whatsappDisplay}`, MARGIN, FOOTER_TOP + 5);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.8);
+    doc.setTextColor(...MUTED);
+    doc.text(
+      "Presupuesto estimado. Los valores finales se confirman por WhatsApp.",
+      MARGIN,
+      FOOTER_TOP + 9.5
+    );
+  }
+
+  function drawTableHeader(y: number) {
+    doc.setFillColor(244, 246, 240);
+    doc.roundedRect(MARGIN, y, CONTENT_WIDTH, HEADER_ROW_H, 1.5, 1.5, "F");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(6.8);
+    doc.setTextColor(...MUTED);
+    doc.text("PRODUCTO", colProduct + 2, y + 4);
+    doc.text("PRESENTACION", colPresentation, y + 4);
+    doc.text("CANT.", colUnit - 1, y + 4, { align: "right" });
+    doc.text("UNITARIO", colSubtotal - 1, y + 4, { align: "right" });
+    doc.text("SUBTOTAL", colEnd - 1, y + 4, { align: "right" });
+  }
+
+  function drawOrderRow(line: OrderPdfLine, imageData: string | null, y: number) {
+    doc.setDrawColor(...BORDER);
+    doc.setFillColor(255, 255, 255);
+    doc.setLineWidth(0.3);
+    doc.roundedRect(MARGIN, y, CONTENT_WIDTH, ROW_H - 1, 1.5, 1.5, "FD");
+
+    const imageBox = 10;
+    doc.setFillColor(...CREAM);
+    doc.roundedRect(colProduct + 2, y + 2, imageBox, imageBox, 1, 1, "F");
+    if (imageData) {
+      doc.addImage(imageData, "JPEG", colProduct + 2, y + 2, imageBox, imageBox);
+    }
+
+    const textX = colProduct + 2 + imageBox + 3;
+    const textWidth = colPresentation - textX - 2;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...FOREST);
+    const nameLines = doc.splitTextToSize(line.name, textWidth).slice(0, 2) as string[];
+    nameLines.forEach((nameLine, index) => doc.text(nameLine, textX, y + 5 + index * 3.6));
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(...TEXT);
+    const presentation = doc.splitTextToSize(line.presentation, colQuantity - colPresentation - 2).slice(0, 1) as string[];
+    doc.text(presentation[0] ?? "", colPresentation, y + 6);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...FOREST);
+    doc.text(String(line.quantity), colUnit - 1, y + 6, { align: "right" });
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...TEXT);
+    doc.text(currency.format(line.unitPrice), colSubtotal - 1, y + 6, { align: "right" });
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...FOREST);
+    doc.text(currency.format(line.subtotal), colEnd - 1, y + 6, { align: "right" });
+  }
+
+  function drawTotals(y: number) {
+    doc.setFillColor(...CREAM);
+    doc.roundedRect(MARGIN, y, CONTENT_WIDTH, 18, 2, 2, "F");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...FOREST);
+    doc.text(`Bultos: ${totalUnits}`, MARGIN + 5, y + 7);
+
+    if (totalKilograms > 0) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(...MUTED);
+      doc.text(`Peso total: ${totalKilograms.toFixed(2)} kg`, MARGIN + 5, y + 11);
+    }
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...MUTED);
+    doc.text("Total estimado", colEnd - 5, y + 6.5, { align: "right" });
+
+    doc.setFont("times", "bold");
+    doc.setFontSize(16);
+    doc.setTextColor(...FOREST);
+    doc.text(currency.format(total), colEnd - 5, y + 13.5, { align: "right" });
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(6.8);
+    doc.setTextColor(...MUTED);
+    doc.text(
+      "Precios estimados: los productos a granel se calculan sobre el valor por kilo.",
+      MARGIN,
+      y + 24
+    );
+  }
+
+  let pageIndex = 0;
+  let lineIndex = 0;
+  let lastRowY = TABLE_TOP_FIRST;
+
+  while (lineIndex < lines.length) {
+    if (pageIndex > 0) doc.addPage();
+    const isFirstPage = pageIndex === 0;
+    drawHeader(isFirstPage);
+    drawFooter();
+
+    const tableTop = isFirstPage ? TABLE_TOP_FIRST : TABLE_TOP_OTHER;
+
+    if (isFirstPage) {
+      doc.setFillColor(...CREAM);
+      doc.roundedRect(MARGIN, 43, CONTENT_WIDTH, 12, 2, 2, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(...FOREST);
+      doc.text("Detalle de pedido mayorista", MARGIN + 5, 48.5);
+
+      const meta = [`Bultos: ${totalUnits}`];
+      if (totalKilograms > 0) meta.push(`Peso total: ${totalKilograms.toFixed(2)} kg`);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7.5);
+      doc.setTextColor(...MUTED);
+      doc.text(meta.join("   ·   "), MARGIN + 5, 52.5);
+    }
+
+    drawTableHeader(tableTop);
+
+    const firstRowY = tableTop + HEADER_ROW_H + 1;
+    const rowsPerPage = Math.floor((FOOTER_TOP - 3 - firstRowY) / ROW_H);
+
+    for (let row = 0; row < rowsPerPage && lineIndex < lines.length; row += 1) {
+      const y = firstRowY + row * ROW_H;
+      drawOrderRow(lines[lineIndex], images[lineIndex], y);
+      lastRowY = y;
+      lineIndex += 1;
+    }
+
+    pageIndex += 1;
+  }
+
+  let totalsY = lastRowY + ROW_H + 3;
+  if (totalsY + 26 > FOOTER_TOP - 1) {
+    doc.addPage();
+    drawHeader(false);
+    drawFooter();
+    totalsY = 40;
+  }
+  drawTotals(totalsY);
+
+  const totalPages = doc.getNumberOfPages();
+  for (let page = 1; page <= totalPages; page += 1) {
+    doc.setPage(page);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7.5);
+    doc.setTextColor(...MUTED);
+    doc.text(`Pagina ${page} de ${totalPages}`, PAGE_WIDTH - MARGIN, FOOTER_TOP + 5, { align: "right" });
+  }
+
+  doc.save(fileName);
+}

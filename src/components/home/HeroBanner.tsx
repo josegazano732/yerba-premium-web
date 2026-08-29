@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Leaf, ShieldCheck, Truck } from "lucide-react";
+import { ChevronLeft, ChevronRight, Leaf, ShieldCheck, Truck, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
 import { cn } from "@/lib/utils";
@@ -120,14 +120,13 @@ export function HeroBanner() {
           >
             <h1 className="sr-only">Tienda de mates, termos, bombillas, yerbas y accesorios materos</h1>
             <div className="mt-7 flex flex-wrap items-center gap-3">
-              <Button href="/productos" className="px-7 py-3 text-base">
+              <Button href="/productos" className="px-8 py-3.5 text-base">
                 Ver la tienda
+                <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
               </Button>
-              <div className="hidden sm:block">
-                <Button href="/sobre-nosotros" variant="secondary" className="px-7 py-3 text-base">
-                  Conocer la marca
-                </Button>
-              </div>
+              <Button href="/sobre-nosotros" variant="secondary" className="px-8 py-3.5 text-base">
+                Conocer la marca
+              </Button>
             </div>
           </motion.div>
         </Container>

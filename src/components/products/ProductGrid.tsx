@@ -3,13 +3,16 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, Filter, Minus, Phone, Plus, Search, ShoppingBag, SlidersHorizontal, Truck, X } from "lucide-react";
 import Image from "next/image";
-import { startTransition, useDeferredValue, useEffect, useRef, useState } from "react";
+import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { mapProductDetails, Product, ProductDetailsRow, products as fallbackProducts } from "@/data/products";
 import { site } from "@/data/site";
 import { FREE_SHIPPING_THRESHOLD, getShippingQuotes, isValidPostalCode, ShippingQuote } from "@/lib/shipping";
 import { supabase } from "@/lib/supabase";
+import { fetchPriceBounds } from "@/lib/catalog";
+import { buildPriceBrackets, deriveMaterial, matchesPriceBracket } from "@/lib/facets";
 import { useCart } from "@/lib/cart-context";
 import { ProductCard } from "./ProductCard";
+import { ProductCardSkeleton } from "./ProductCardSkeleton";
 import { ProductDetail } from "./ProductDetail";
 
 type Sort = "featured" | "price-asc" | "price-desc" | "name";
@@ -43,10 +46,13 @@ export function ProductGrid() {
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null);
   const [shippingError, setShippingError] = useState("");
   const [isShippingOpen, setIsShippingOpen] = useState(false);
-  const [openSections, setOpenSections] = useState({ categorias: true, orden: true });
+  const [openSections, setOpenSections] = useState({ categorias: true, material: true, precio: true, orden: true });
   const [catalogError, setCatalogError] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(24);
+  const [material, setMaterial] = useState("Todos");
+  const [priceBracketId, setPriceBracketId] = useState<string | null>(null);
+  const [priceBounds, setPriceBounds] = useState({ min: 0, max: 0 });
   const resultsRef = useRef<HTMLDivElement>(null);
   const deferredQuery = useDeferredValue(query.trim().toLowerCase());
 
@@ -63,6 +69,10 @@ export function ProductGrid() {
       setCatalogProducts(fallbackProducts);
       setCatalogError(true);
       setIsLoading(false);
+      setPriceBounds({
+        min: Math.min(...fallbackProducts.map((product) => product.price)),
+        max: Math.max(...fallbackProducts.map((product) => product.price))
+      });
       return;
     }
 
@@ -78,6 +88,10 @@ export function ProductGrid() {
           setCatalogProducts(fallbackProducts);
           setCatalogError(true);
           setIsLoading(false);
+          setPriceBounds({
+            min: Math.min(...fallbackProducts.map((product) => product.price)),
+            max: Math.max(...fallbackProducts.map((product) => product.price))
+          });
           return;
         }
         startTransition(() => {
@@ -86,12 +100,30 @@ export function ProductGrid() {
         });
       });
 
+    fetchPriceBounds()
+      .then((bounds) => {
+        if (active) setPriceBounds(bounds);
+      })
+      .catch(() => undefined);
+
     return () => {
       active = false;
     };
   }, []);
 
   const categories = ["Todos", ...Array.from(new Set(catalogProducts.map((product) => product.category)))];
+
+  const materials = useMemo(
+    () => ["Todos", ...Array.from(new Set(catalogProducts.map((product) => deriveMaterial(product))))],
+    [catalogProducts]
+  );
+
+  const priceBrackets = useMemo(
+    () => buildPriceBrackets(priceBounds.min, priceBounds.max),
+    [priceBounds]
+  );
+
+  const activePriceBracket = priceBrackets.find((bracket) => bracket.id === priceBracketId) ?? null;
 
   useEffect(() => {
     if (catalogProducts.length === 0) return;
@@ -114,6 +146,8 @@ export function ProductGrid() {
 
   const visibleProducts = catalogProducts
     .filter((product) => category === "Todos" || product.category === category)
+    .filter((product) => material === "Todos" || deriveMaterial(product) === material)
+    .filter((product) => !activePriceBracket || matchesPriceBracket(product.price, activePriceBracket))
     .filter((product) => `${product.name} ${product.description}`.toLowerCase().includes(deferredQuery))
     .sort((first, second) => {
       if (category === "Todos") {
@@ -129,7 +163,7 @@ export function ProductGrid() {
 
   useEffect(() => {
     setVisibleCount(24);
-  }, [category, deferredQuery, sort]);
+  }, [category, deferredQuery, sort, material, priceBracketId]);
 
   useEffect(() => {
     if (!isFilterOpen) return;
@@ -264,6 +298,28 @@ export function ProductGrid() {
                 <X size={15} />
               </button>
             ) : null}
+            {material !== "Todos" ? (
+              <button
+                type="button"
+                onClick={() => setMaterial("Todos")}
+                className="inline-flex h-11 items-center gap-2 rounded-full bg-[#20341d] px-4 text-sm font-bold text-white transition hover:bg-primary"
+                aria-label={`Quitar filtro ${material}`}
+              >
+                {material}
+                <X size={15} />
+              </button>
+            ) : null}
+            {activePriceBracket ? (
+              <button
+                type="button"
+                onClick={() => setPriceBracketId(null)}
+                className="inline-flex h-11 items-center gap-2 rounded-full bg-[#20341d] px-4 text-sm font-bold text-white transition hover:bg-primary"
+                aria-label={`Quitar filtro ${activePriceBracket.label}`}
+              >
+                {activePriceBracket.label}
+                <X size={15} />
+              </button>
+            ) : null}
           </div>
 
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -302,7 +358,7 @@ export function ProductGrid() {
 
       {isLoading ? (
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" aria-label="Cargando productos">
-          {Array.from({ length: 8 }, (_, index) => <div key={index} className="aspect-[4/5] animate-pulse rounded-[8px] bg-white/70 ring-1 ring-[#e2ddd3]" />)}
+          {Array.from({ length: 8 }, (_, index) => <ProductCardSkeleton key={index} />)}
         </div>
       ) : visibleProducts.length > 0 ? (
         <motion.div layout className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -465,6 +521,52 @@ export function ProductGrid() {
               </div>
 
               <div className="mt-8 border-t border-white/15 pt-5">
+                <button type="button" onClick={() => setOpenSections((current) => ({ ...current, material: !current.material }))} className="flex w-full items-center justify-between text-sm font-bold uppercase tracking-[0.12em]" aria-expanded={openSections.material}>
+                  Material
+                  {openSections.material ? <Minus size={16} /> : <Plus size={16} />}
+                </button>
+                {openSections.material ? (
+                  <ul className="mt-4 space-y-2.5">
+                    {materials.map((item) => (
+                      <li key={item}>
+                        <button
+                          type="button"
+                          onClick={() => setMaterial(item)}
+                          aria-pressed={material === item}
+                          className={`text-left text-sm transition hover:text-[#d7e68c] ${material === item ? "font-bold text-[#d7e68c]" : "text-white/85"}`}
+                        >
+                          {item}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+
+              <div className="mt-8 border-t border-white/15 pt-5">
+                <button type="button" onClick={() => setOpenSections((current) => ({ ...current, precio: !current.precio }))} className="flex w-full items-center justify-between text-sm font-bold uppercase tracking-[0.12em]" aria-expanded={openSections.precio}>
+                  Precio
+                  {openSections.precio ? <Minus size={16} /> : <Plus size={16} />}
+                </button>
+                {openSections.precio ? (
+                  <ul className="mt-4 space-y-2.5">
+                    {priceBrackets.map((bracket) => (
+                      <li key={bracket.id}>
+                        <button
+                          type="button"
+                          onClick={() => setPriceBracketId(priceBracketId === bracket.id ? null : bracket.id)}
+                          aria-pressed={priceBracketId === bracket.id}
+                          className={`text-left text-sm transition hover:text-[#d7e68c] ${priceBracketId === bracket.id ? "font-bold text-[#d7e68c]" : "text-white/85"}`}
+                        >
+                          {bracket.label}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+              </div>
+
+              <div className="mt-8 border-t border-white/15 pt-5">
                 <button type="button" onClick={() => setOpenSections((current) => ({ ...current, orden: !current.orden }))} className="flex w-full items-center justify-between text-sm font-bold uppercase tracking-[0.12em]" aria-expanded={openSections.orden}>
                   Ordenar por
                   {openSections.orden ? <Minus size={16} /> : <Plus size={16} />}
@@ -495,6 +597,8 @@ export function ProductGrid() {
                   type="button"
                   onClick={() => {
                     setCategory("Todos");
+                    setMaterial("Todos");
+                    setPriceBracketId(null);
                     setSort("featured");
                     setQuery("");
                   }}

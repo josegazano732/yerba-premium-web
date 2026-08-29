@@ -23,13 +23,15 @@ type ProductCardProps = {
 export function ProductCard({ product, onAdd, onSelect }: Readonly<ProductCardProps>) {
   const cardInner = (
     <>
-      <div className="relative aspect-[4/4.3] overflow-hidden rounded-[6px] bg-secondary/35">
+      <div className="relative aspect-[4/4.3] overflow-hidden rounded-[6px] bg-secondary/35 shadow-[0_6px_16px_rgba(37,48,27,0.08)] ring-1 ring-[#e3ddcf]">
         <Image
           src={product.image}
           alt={`${product.name} — ${product.category}`}
           fill
           className="object-cover transition duration-500 group-hover:scale-105"
           sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+          loading="lazy"
+          decoding="async"
         />
         {product.discount ? (
           <span className="absolute left-3 top-3 rounded bg-[#20341d] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
@@ -41,7 +43,7 @@ export function ProductCard({ product, onAdd, onSelect }: Readonly<ProductCardPr
         <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-primary">
           {product.category}{product.weight ? ` · ${product.weight}` : ""}
         </p>
-        <h3 className="mt-2 font-serif text-2xl font-semibold leading-tight text-text transition group-hover:text-primary">
+        <h3 className="mt-2 line-clamp-2 font-serif text-lg font-semibold leading-snug text-text transition group-hover:text-primary">
           {product.name}
         </h3>
       </div>
@@ -68,19 +70,19 @@ export function ProductCard({ product, onAdd, onSelect }: Readonly<ProductCardPr
           {cardInner}
         </Link>
       )}
-      <div className="flex flex-1 flex-col px-3 pb-2">
+      <div className="flex flex-1 flex-col justify-end px-3 pb-2">
         <div className="mt-5 flex items-end justify-between gap-3 border-t border-[#e7e2d8] pt-4">
           <div>
             {product.compareAtPrice ? (
               <p className="text-xs text-muted line-through">{currency.format(product.compareAtPrice)}</p>
             ) : null}
-            <p className="text-lg font-extrabold text-[#20341d]">{currency.format(product.price)}</p>
+            <p className="text-xl font-extrabold tracking-tight text-forest">{currency.format(product.price)}</p>
           </div>
           {onAdd ? (
             <button
               type="button"
               onClick={() => onAdd(product)}
-              className="group/add inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-cta px-3 text-white transition-all duration-300 hover:bg-cta-hover focus:outline-none focus:ring-2 focus:ring-cta focus:ring-offset-2"
+              className="group/add inline-flex h-10 shrink-0 items-center justify-center rounded-full bg-cta px-3 text-white shadow-sm shadow-cta/20 transition-all duration-300 hover:bg-cta-hover hover:shadow-md hover:shadow-cta/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cta focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               aria-label={`Agregar ${product.name} al carrito`}
             >
               <ShoppingBag size={16} className="shrink-0" />

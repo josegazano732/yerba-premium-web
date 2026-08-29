@@ -3,6 +3,7 @@ import { createClient } from "@supabase/supabase-js";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
+import { cache } from "react";
 import { mapProductDetails, type Product, type ProductDetailsRow } from "@/data/products";
 import { site } from "@/data/site";
 import { slugify, productUrl, categoryUrl, buildProductSchema, buildBreadcrumbSchema } from "@/lib/seo";
@@ -16,7 +17,7 @@ function getClient() {
   return url && key ? createClient(url, key) : null;
 }
 
-async function fetchProductBySlug(slug: string) {
+const fetchProductBySlug = cache(async (slug: string) => {
   const client = getClient();
   if (!client) return null;
   const { data } = await client
@@ -29,9 +30,9 @@ async function fetchProductBySlug(slug: string) {
       .filter((p): p is NonNullable<ReturnType<typeof mapProductDetails>> => p !== null)
       .find((p) => slugify(p.name) === slug) ?? null
   );
-}
+});
 
-async function fetchRelatedProducts(category: string, excludeId: string): Promise<Product[]> {
+const fetchRelatedProducts = cache(async (category: string, excludeId: string): Promise<Product[]> => {
   const client = getClient();
   if (!client) return [];
   const { data } = await client
@@ -46,7 +47,7 @@ async function fetchRelatedProducts(category: string, excludeId: string): Promis
       .filter((p): p is Product => p !== null && p.id !== excludeId)
       .slice(0, 4) ?? []
   );
-}
+});
 
 export async function generateStaticParams() {
   const client = getClient();
@@ -187,7 +188,7 @@ export default async function ProductPage({
                 ))}
               </div>
             )}
-            <div className="relative aspect-square flex-1 overflow-hidden rounded-[8px] bg-secondary/20">
+            <div className="relative aspect-square flex-1 overflow-hidden rounded-[8px] bg-secondary/20 shadow-[0_10px_30px_rgba(37,48,27,0.10)] ring-1 ring-[#e3ddcf]">
               <Image
                 src={gallery[0]}
                 alt={`${product.name} — ${product.category}`}

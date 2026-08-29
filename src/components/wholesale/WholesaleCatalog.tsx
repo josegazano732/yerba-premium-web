@@ -119,8 +119,19 @@ export function WholesaleCatalog() {
       // localStorage no disponible
     }
   }, [order]);
+
+  // Oculta el Agente Matero (FAB) mientras el pedido mayorista esta abierto.
+  useEffect(() => {
+    document.body.dataset.cartOpen = isOrderOpen ? "true" : "";
+    return () => {
+      document.body.dataset.cartOpen = "";
+    };
+  }, [isOrderOpen]);
+
   const [isPdfLoading, setIsPdfLoading] = useState(false);
   const [pdfError, setPdfError] = useState("");
+  const [isOrderPdfLoading, setIsOrderPdfLoading] = useState(false);
+  const [orderPdfError, setOrderPdfError] = useState("");
   const [addedLine, setAddedLine] = useState<{ product: Product; grams: number | null; customUnit: boolean; label: string } | null>(null);
 
   useEffect(() => {
@@ -246,6 +257,34 @@ export function WholesaleCatalog() {
       setPdfError("No pudimos generar el PDF. Volve a intentarlo.");
     } finally {
       setIsPdfLoading(false);
+    }
+  }
+
+  async function handleDownloadOrderPdf() {
+    if (order.length === 0) return;
+    setIsOrderPdfLoading(true);
+    setOrderPdfError("");
+    try {
+      const { downloadOrderPdf } = await import("@/lib/catalogPdf");
+      await downloadOrderPdf({
+        title: activeCatalog?.title ?? "Pedido mayorista",
+        fileName: "detalle-pedido-mayorista.pdf",
+        totalUnits,
+        totalKilograms: totalGrams / 1000,
+        total: orderTotal,
+        lines: order.map((line) => ({
+          name: line.product.name,
+          image: line.product.image,
+          presentation: line.grams === null ? "Por unidad" : line.customUnit ? `${line.grams} g personalizado` : `${line.grams} g`,
+          quantity: line.quantity,
+          unitPrice: priceFor(line.product, line.grams, line.customUnit),
+          subtotal: priceFor(line.product, line.grams, line.customUnit) * line.quantity
+        }))
+      });
+    } catch {
+      setOrderPdfError("No pudimos generar el PDF. Volve a intentarlo.");
+    } finally {
+      setIsOrderPdfLoading(false);
     }
   }
 
@@ -676,10 +715,20 @@ export function WholesaleCatalog() {
                 >
                   Enviar pedido por WhatsApp
                 </a>
-                <p className="mt-3 text-xs leading-5 text-muted">
-                  Precios estimados: los productos a granel se calculan sobre el valor por kilo. Confirmamos disponibilidad y
-                  condiciones mayoristas por WhatsApp.
-                </p>
+                <button
+                  type="button"
+                  onClick={handleDownloadOrderPdf}
+                  disabled={order.length === 0 || isOrderPdfLoading}
+                  className="mt-3 inline-flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[#20341d] bg-white px-5 text-sm font-bold text-[#20341d] transition hover:bg-[#20341d] hover:text-white disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:bg-white disabled:hover:text-[#20341d]"
+                >
+                  <FileDown size={16} />
+                  {isOrderPdfLoading ? "Generando PDF..." : "Descargar detalle (PDF)"}
+                </button>
+                {orderPdfError ? (
+                  <p role="alert" className="mt-2 text-xs font-semibold text-red-700">
+                    {orderPdfError}
+                  </p>
+                ) : null}
               </div>
             </motion.aside>
           </>

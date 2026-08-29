@@ -68,7 +68,7 @@ export function ProductDetail({ product, related, onAdd, onSelect, onClose }: Re
               ))}
             </div>
 
-            <div className="relative aspect-square flex-1 overflow-hidden rounded-[8px] bg-secondary/20">
+            <div className="relative aspect-square flex-1 overflow-hidden rounded-[8px] bg-secondary/20 shadow-[0_10px_30px_rgba(37,48,27,0.10)] ring-1 ring-[#e3ddcf]">
               <Image src={activeImage} alt={product.name} fill sizes="(min-width: 1024px) 45vw, 100vw" className="object-contain" priority />
             </div>
           </div>
@@ -107,7 +107,7 @@ export function ProductDetail({ product, related, onAdd, onSelect, onClose }: Re
               <button
                 type="button"
                 onClick={() => onAdd(product, quantity)}
-                className="h-14 flex-1 rounded-full bg-[#20341d] px-8 text-base font-bold text-white transition hover:bg-primary focus:outline-none focus:ring-2 focus:ring-cta focus:ring-offset-2"
+                className="h-14 flex-1 rounded-full bg-cta px-8 text-base font-bold text-white shadow-sm shadow-cta/20 transition hover:bg-cta-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cta focus-visible:ring-offset-2 focus-visible:ring-offset-background"
               >
                 Agregar al carrito
               </button>
@@ -124,14 +124,14 @@ export function ProductDetail({ product, related, onAdd, onSelect, onClose }: Re
                   key={item.id}
                   type="button"
                   onClick={() => onSelect(item)}
-                  className="group rounded-[8px] border border-[#d9d4c8] bg-[#fffdf8] p-2 text-left transition hover:border-primary/30"
+                  className="group rounded-[8px] border border-[#d9d4c8] bg-[#fffdf8] p-2 text-left shadow-[0_10px_35px_rgba(37,48,27,0.06)] transition hover:border-primary/30 hover:shadow-[0_18px_45px_rgba(37,48,27,0.12)]"
                 >
-                  <div className="relative aspect-[4/4.3] overflow-hidden rounded-[6px] bg-secondary/30">
+                  <div className="relative aspect-[4/4.3] overflow-hidden rounded-[6px] bg-secondary/30 shadow-[0_6px_16px_rgba(37,48,27,0.08)] ring-1 ring-[#e3ddcf]">
                     <Image src={item.image} alt={item.name} fill sizes="(min-width: 1024px) 22vw, 45vw" className="object-cover transition duration-500 group-hover:scale-105" />
                   </div>
                   <div className="p-3">
                     <p className="line-clamp-2 font-serif text-lg leading-tight text-text">{item.name}</p>
-                    <p className="mt-2 text-base font-extrabold text-[#20341d]">{formatPrice(item.price)}</p>
+                    <p className="mt-2 text-lg font-extrabold text-forest">{formatPrice(item.price)}</p>
                   </div>
                 </button>
               ))}

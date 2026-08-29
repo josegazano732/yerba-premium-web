@@ -18,7 +18,7 @@ const variants = {
 
 export function Button({ href, children, variant = "primary", className, type = "button" }: ButtonProps) {
   const classes = cn(
-    "inline-flex min-h-11 items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold transition duration-300 hover:scale-[1.03] active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-cta focus:ring-offset-2 focus:ring-offset-background",
+    "inline-flex min-h-11 items-center justify-center rounded-full px-5 py-2.5 text-sm font-semibold transition duration-300 hover:scale-[1.03] active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cta focus-visible:ring-offset-2 focus-visible:ring-offset-background",
     variants[variant],
     className
   );

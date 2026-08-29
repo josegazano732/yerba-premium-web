@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import { HeroBanner } from "@/components/home/HeroBanner";
+import { CategoryQuickLinks } from "@/components/home/CategoryQuickLinks";
+import { InstagramHighlights } from "@/components/home/InstagramHighlights";
 import { ProductMarquee } from "@/components/home/ProductMarquee";
 import { PromoBanner } from "@/components/home/PromoBanner";
 import { FeaturedProducts } from "@/components/products/FeaturedProducts";
@@ -20,9 +22,11 @@ export default function Home() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(buildOrganizationSchema()) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(buildWebSiteSchema()) }} />
       <HeroBanner />
+      <CategoryQuickLinks />
       <FeaturedProducts />
       <PromoBanner />
       <ProductMarquee />
+      <InstagramHighlights />
     </main>
   );
 }

@@ -20,7 +20,7 @@ export function AddToCartButton({ product }: { product: Product }) {
       type="button"
       onClick={handleAdd}
       disabled={product.stock === 0}
-      className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-cta px-8 text-sm font-bold text-white transition-all duration-300 hover:bg-cta-hover focus:outline-none focus:ring-2 focus:ring-cta focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-[200px]"
+      className="inline-flex h-12 w-full items-center justify-center gap-2 rounded-full bg-cta px-8 text-sm font-bold text-white shadow-sm shadow-cta/20 transition-all duration-300 hover:bg-cta-hover hover:shadow-md hover:shadow-cta/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cta focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:min-w-[200px]"
     >
       <ShoppingBag size={18} />
       {added ? "¡Agregado al carrito!" : product.stock === 0 ? "Sin stock" : "Agregar al carrito"}

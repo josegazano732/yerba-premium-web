@@ -12,6 +12,9 @@ export type CatalogSnapshot = {
   categories: StoreCategory[];
 };
 
+/** Columnas mínimas que consume la UI (evita cost, markup_percentage, updated_at, etc.). */
+const PRODUCT_COLUMNS = "id,name,description,price,image,image_urls,category_name,unit_of_measure,stock,seasonal";
+
 let catalogRequest: Promise<CatalogSnapshot> | null = null;
 
 /** Comparte una unica peticion entre todas las secciones del home. */
@@ -32,7 +35,7 @@ async function fetchCatalog(): Promise<CatalogSnapshot> {
   const [productsResult, categoriesResult] = await Promise.all([
     supabase
       .from("product_details")
-      .select("id,name,description,price,image,image_urls,category_name,unit_of_measure,stock,seasonal")
+      .select(PRODUCT_COLUMNS)
       .not("image", "is", null)
       .order("name"),
     supabase
@@ -53,4 +56,29 @@ async function fetchCatalog(): Promise<CatalogSnapshot> {
     products,
     categories: (categoriesResult.data as StoreCategory[] | null) ?? []
   };
+}
+
+/** Rango de precios real del catálogo para construir los brackets del filtro de precio. */
+export async function fetchPriceBounds(): Promise<{ min: number; max: number }> {
+  if (!supabase) return { min: 0, max: 0 };
+
+  const [minResult, maxResult] = await Promise.all([
+    supabase
+      .from("product_details")
+      .select("price")
+      .gt("price", 0)
+      .order("price", { ascending: true })
+      .limit(1),
+    supabase
+      .from("product_details")
+      .select("price")
+      .gt("price", 0)
+      .order("price", { ascending: false })
+      .limit(1)
+  ]);
+
+  const min = Number((minResult.data?.[0] as { price?: number | string } | undefined)?.price ?? 0);
+  const max = Number((maxResult.data?.[0] as { price?: number | string } | undefined)?.price ?? 0);
+
+  return { min, max };
 }

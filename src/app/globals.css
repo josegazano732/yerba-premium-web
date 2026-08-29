@@ -2,14 +2,16 @@
 
 :root {
   --background: #f7f2ea;
-  --primary: #6c8e37;
+  --primary: #4c6f23;
   --secondary: #d8c4a6;
-  --accent: #6c8e37;
-  --cta: #6c8e37;
-  --cta-hover: #5b7a2c;
+  --accent: #4c6f23;
+  --cta: #4c6f23;
+  --cta-hover: #3e5c1c;
   --forest: #20341d;
+  --bark: #3b2a1d;
+  --bark-hover: #2c1e13;
   --text: #2d3328;
-  --muted: #63685c;
+  --muted: #54594d;
   --white: #ffffff;
 }
 
@@ -21,6 +23,8 @@
   --color-cta: var(--cta);
   --color-cta-hover: var(--cta-hover);
   --color-forest: var(--forest);
+  --color-bark: var(--bark);
+  --color-bark-hover: var(--bark-hover);
   --color-text: var(--text);
   --color-muted: var(--muted);
   --color-white: var(--white);

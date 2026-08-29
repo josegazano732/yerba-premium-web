@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { Container } from "@/components/ui/Container";
 import { useCatalog } from "@/lib/useCatalog";
@@ -56,101 +57,68 @@ export function PromoBanner() {
   if (!image) return null;
 
   return (
-    <section
-      className="bg-background bg-cover bg-center py-16 sm:py-20"
-      style={{ backgroundImage: "url('/backgroun.jfif')" }}
-    >
+    <section className="bg-background py-16 sm:py-20">
       <Container className="max-w-[92rem]">
-        <header className="mb-8 text-center sm:mb-10">
-          <div className="mx-auto max-w-4xl overflow-hidden rounded-[1.75rem] border border-white/60 bg-gradient-to-b from-[#fffdf8] to-[#f6f2e7] px-5 py-6 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),0_16px_40px_-12px_rgba(32,52,29,0.18),0_4px_12px_rgba(32,52,29,0.08)] ring-1 ring-[#6c8e37]/10 backdrop-blur-md sm:px-10 sm:py-8">
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#6c8e37]/35 bg-[#edf3df] px-4 py-1.5">
-              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[#41621f]" />
-              <p className="text-[11px] font-extrabold uppercase tracking-[0.16em] text-[#28431e]">Categoria destacada</p>
-            </div>
-            <h2 className="mx-auto mt-4 hidden max-w-3xl text-balance font-serif text-3xl font-semibold leading-tight text-[#172116] sm:block sm:text-5xl">
-              Stickers y calcomanias premium
-            </h2>
-            <p className="mx-auto mt-4 hidden max-w-3xl text-pretty text-sm font-medium leading-6 text-[#30472c] sm:block sm:text-base sm:leading-7">
-              Disenos exclusivos para personalizar mates, termos y accesorios con una identidad natural, premium y profesional.
-            </p>
-          </div>
-        </header>
-
-        <Link
-          href="/productos"
-          className="group block transition focus:outline-none focus:ring-2 focus:ring-accent"
-        >
-          <div className="grid items-stretch gap-4 sm:gap-5 lg:grid-cols-12">
+        <div className="grid overflow-hidden rounded-[2rem] border border-[#7c925f]/25 bg-white/70 shadow-[0_28px_70px_-28px_rgba(32,52,29,0.35)] ring-1 ring-white/70 md:grid-cols-2">
+          {/* Columna izquierda: imagen lifestyle a todo el alto */}
+          <div className="relative min-h-[300px] w-full overflow-hidden sm:min-h-[420px] md:min-h-[540px]">
+            <Image
+              src={image}
+              alt="Mate y termo de Mate Tierra personalizados con un sticker premium aplicado"
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="object-cover object-center"
+            />
             <div
-              className="relative isolate aspect-[5/4] w-full overflow-hidden rounded-[20px] border border-[#7c925f]/30 bg-white/35 shadow-[0_22px_60px_rgba(32,52,29,0.22)] ring-1 ring-white/55 backdrop-blur-[1px] lg:col-span-9 sm:aspect-[1400/770]"
-              style={{
-                WebkitMaskImage: "radial-gradient(ellipse 142% 128% at center, black 64%, rgba(0,0,0,0.88) 74%, rgba(0,0,0,0.42) 88%, transparent 100%)",
-                maskImage: "radial-gradient(ellipse 142% 128% at center, black 64%, rgba(0,0,0,0.88) 74%, rgba(0,0,0,0.42) 88%, transparent 100%)"
-              }}
-            >
-              <Image
-                src={image}
-                alt="Coleccion destacada de stickers y calcomanias"
-                fill
-                sizes="(max-width: 1024px) 100vw, (max-width: 1440px) 70vw, 1100px"
-                className="object-cover object-center transition duration-700 group-hover:scale-[1.02] sm:object-contain"
-              />
-              <div aria-hidden="true" className="pointer-events-none absolute inset-0 rounded-[inherit] border border-white/35" />
-              <div aria-hidden="true" className="pointer-events-none absolute inset-[8px] rounded-[14px] border border-[#90aa6a]/28" />
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0"
-                style={{
-                  background: [
-                    "radial-gradient(138% 86% at 50% -12%, rgba(35,16,6,0.66) 0%, rgba(64,34,15,0.32) 22%, rgba(64,34,15,0.07) 40%, rgba(64,34,15,0) 56%)",
-                    "radial-gradient(138% 86% at 50% 112%, rgba(35,16,6,0.66) 0%, rgba(64,34,15,0.32) 22%, rgba(64,34,15,0.07) 40%, rgba(64,34,15,0) 56%)",
-                    "radial-gradient(84% 136% at -12% 50%, rgba(35,16,6,0.56) 0%, rgba(64,34,15,0.28) 20%, rgba(64,34,15,0.05) 38%, rgba(64,34,15,0) 52%)",
-                    "radial-gradient(84% 136% at 112% 50%, rgba(35,16,6,0.56) 0%, rgba(64,34,15,0.28) 20%, rgba(64,34,15,0.05) 38%, rgba(64,34,15,0) 52%)"
-                  ].join(","),
-                  boxShadow: "inset 0 0 78px rgba(33,15,5,0.34), inset 0 0 22px rgba(255,190,120,0.16)",
-                  mixBlendMode: "multiply"
-                }}
-              />
-              <div
-                aria-hidden="true"
-                className="pointer-events-none absolute inset-0"
-                style={{
-                  background:
-                    "radial-gradient(126% 84% at 50% -15%, rgba(255,208,140,0.24) 0%, rgba(255,208,140,0.09) 18%, rgba(255,208,140,0) 40%), radial-gradient(126% 84% at 50% 115%, rgba(255,208,140,0.24) 0%, rgba(255,208,140,0.09) 18%, rgba(255,208,140,0) 40%)",
-                  mixBlendMode: "screen"
-                }}
-              />
+              aria-hidden="true"
+              className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:via-transparent md:to-black/10"
+            />
+          </div>
+
+          {/* Columna derecha: contenido sobre fondo neutro, centrado verticalmente */}
+          <div className="flex flex-col justify-center gap-6 bg-[#fffdf8] px-6 py-10 sm:px-10 sm:py-14 lg:px-14 lg:py-16">
+            <h2 className="text-balance font-serif text-3xl font-bold leading-[1.1] text-forest sm:text-4xl lg:text-[2.75rem]">
+              Stickers y calcomanías premium
+            </h2>
+            <p className="max-w-md text-pretty text-base font-medium leading-7 text-muted sm:text-lg">
+              Dale tu identidad única y natural a tus mates, termos y accesorios con nuestros diseños exclusivos.
+            </p>
+            <div className="mt-2">
+              <Link
+                href="/productos"
+                className="group inline-flex min-h-12 items-center justify-center rounded-full bg-bark px-8 py-3.5 text-base font-semibold text-white shadow-sm shadow-bark/25 transition duration-300 hover:scale-[1.02] hover:bg-bark-hover hover:shadow-md hover:shadow-bark/30 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-bark focus-visible:ring-offset-2 focus-visible:ring-offset-[#fffdf8]"
+              >
+                Ver diseños exclusivos
+                <ArrowRight
+                  className="ml-2 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1"
+                  aria-hidden="true"
+                />
+              </Link>
             </div>
 
             {secondaryImages.length > 0 ? (
-              <div className="hidden rounded-[14px] border border-primary/15 bg-white/35 p-2.5 backdrop-blur-[1px] sm:block sm:p-3 lg:col-span-3">
-                <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-primary/80">Mas stickers</p>
-                <div className="grid grid-cols-2 gap-3">
+              <div className="mt-6 border-t border-[#7c925f]/15 pt-6">
+                <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.14em] text-primary/80">Más diseños</p>
+                <div className="grid grid-cols-4 gap-2.5 sm:gap-3">
                   {secondaryImages.map((source, index) => (
                     <div
                       key={source}
-                      className={`relative overflow-hidden rounded-[10px] border border-primary/15 bg-white/30 ${
-                        index > 1 ? "hidden sm:block" : ""
-                      } ${
-                        index === 0 ? "col-span-2" : ""
-                      }`}
+                      className="relative aspect-square overflow-hidden rounded-xl border border-primary/15 bg-white/50 shadow-sm"
                     >
-                      <div className={`relative ${index === 0 ? "aspect-[16/10]" : "aspect-square"}`}>
-                        <Image
-                          src={source}
-                          alt={`Sticker destacado ${index + 1}`}
-                          fill
-                          sizes="(max-width: 1024px) 45vw, 280px"
-                          className="object-cover object-center transition duration-700 group-hover:scale-[1.04]"
-                        />
-                      </div>
+                      <Image
+                        src={source}
+                        alt={`Diseño de sticker ${index + 1}`}
+                        fill
+                        sizes="120px"
+                        className="object-cover object-center"
+                      />
                     </div>
                   ))}
                 </div>
               </div>
             ) : null}
           </div>
-        </Link>
+        </div>
       </Container>
     </section>
   );

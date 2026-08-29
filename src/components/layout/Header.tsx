@@ -10,6 +10,8 @@ import { Container } from "@/components/ui/Container";
 import { useCatalog } from "@/lib/useCatalog";
 import { categoryUrl } from "@/lib/seo";
 import { site } from "@/data/site";
+import { formatPrice } from "@/lib/utils";
+import { FREE_SHIPPING_THRESHOLD } from "@/lib/shipping";
 import { MobileMenu } from "./MobileMenu";
 
 const navItems = [
@@ -44,8 +46,9 @@ const visualFallbackCards = [
 ];
 
 const announcements = [
-  { icon: "🚚", text: "Envío GRATIS a partir de $100.000" },
-  { icon: "🎁", text: "Superando los $50.000 ¡tenés un regalo!" }
+  { icon: "🚚", text: `Envío GRATIS a partir de ${formatPrice(FREE_SHIPPING_THRESHOLD)}` },
+  { icon: "💳", text: "Pagá en cuotas con tarjeta de crédito" },
+  { icon: "🇦🇷", text: "Cobertura nacional: enviamos a todo el país" }
 ];
 
 export function Header() {

@@ -5,14 +5,18 @@ declare module "lucide-react" {
 
   export const ArrowRight: LucideIcon;
   export const ArrowUp: LucideIcon;
+  export const Backpack: LucideIcon;
   export const Check: LucideIcon;
   export const ChevronDown: LucideIcon;
   export const ChevronLeft: LucideIcon;
   export const ChevronRight: LucideIcon;
+  export const Coffee: LucideIcon;
   export const CreditCard: LucideIcon;
+  export const CupSoda: LucideIcon;
   export const ExternalLink: LucideIcon;
   export const FileDown: LucideIcon;
   export const Filter: LucideIcon;
+  export const FlaskConical: LucideIcon;
   export const Instagram: LucideIcon;
   export const Leaf: LucideIcon;
   export const Mail: LucideIcon;

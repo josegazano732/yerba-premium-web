@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { ChevronDown, Filter, Minus, Phone, Plus, Search, ShoppingBag, SlidersHorizontal, Truck, X } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { mapProductDetails, Product, ProductDetailsRow, products as fallbackProducts } from "@/data/products";
 import { site } from "@/data/site";
@@ -763,7 +764,10 @@ export function ProductGrid() {
                   </div>
                   <p className="mt-3 text-xs font-bold uppercase tracking-wide text-muted">Formas de pago</p>
                   <p className="mt-1 text-xs leading-5 text-muted">{site.paymentMethods.join(" · ")}</p>
-                  <a href={buildWhatsappLink()} target="_blank" rel="noopener noreferrer" className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-cta text-sm font-bold text-white transition hover:bg-cta-hover focus:outline-none focus:ring-2 focus:ring-cta focus:ring-offset-2"><Phone size={18} /> Iniciar compra por WhatsApp</a>
+                  <Link href="/checkout" className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-cta text-sm font-bold text-white transition hover:bg-cta-hover focus:outline-none focus:ring-2 focus:ring-cta focus:ring-offset-2">
+                    Finalizar compra
+                  </Link>
+                  <a href={buildWhatsappLink()} target="_blank" rel="noopener noreferrer" className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[#d7d2c7] text-sm font-bold text-[#20341d] transition hover:border-primary"><Phone size={18} /> Comprar por WhatsApp</a>
                   <button type="button" onClick={() => setIsCartOpen(false)} className="mt-3 w-full text-xs font-semibold text-muted underline underline-offset-4 transition hover:text-[#20341d]">
                     Ver más productos
                   </button>

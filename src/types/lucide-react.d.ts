@@ -7,9 +7,11 @@ declare module "lucide-react" {
   export const ArrowUp: LucideIcon;
   export const Backpack: LucideIcon;
   export const Check: LucideIcon;
+  export const CheckCircle2: LucideIcon;
   export const ChevronDown: LucideIcon;
   export const ChevronLeft: LucideIcon;
   export const ChevronRight: LucideIcon;
+  export const Clock: LucideIcon;
   export const Coffee: LucideIcon;
   export const CreditCard: LucideIcon;
   export const CupSoda: LucideIcon;
@@ -19,6 +21,8 @@ declare module "lucide-react" {
   export const FlaskConical: LucideIcon;
   export const Instagram: LucideIcon;
   export const Leaf: LucideIcon;
+  export const LoaderCircle: LucideIcon;
+  export const Lock: LucideIcon;
   export const Mail: LucideIcon;
   export const MapPin: LucideIcon;
   export const Menu: LucideIcon;
@@ -39,5 +43,6 @@ declare module "lucide-react" {
   export const Trash2: LucideIcon;
   export const Truck: LucideIcon;
   export const X: LucideIcon;
+  export const XCircle: LucideIcon;
   export const Youtube: LucideIcon;
 }

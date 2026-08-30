@@ -28,6 +28,8 @@ yarn-error.log*
 .env*
 # Solo claves publicas (anon key protegida por RLS), necesarias para el build de GitHub Pages
 !.env.production
+# Plantilla documentada (sin secretos) para configurar el entorno
+!.env.example
 
 # vercel
 .vercel

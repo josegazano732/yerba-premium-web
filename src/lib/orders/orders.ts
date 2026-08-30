@@ -180,6 +180,7 @@ export async function createOrder(input: CreateOrderInput): Promise<StoredOrder>
     .single();
 
   if (orderError || !order) {
+    console.error("[orders] Error al insertar pedido:", orderError);
     throw new OrderError("No se pudo crear el pedido.", 500);
   }
 
@@ -196,6 +197,7 @@ export async function createOrder(input: CreateOrderInput): Promise<StoredOrder>
   );
 
   if (itemsError) {
+    console.error("[orders] Error al insertar items:", itemsError);
     // Mejor intento: si fallan los items, marcamos la orden como cancelada en
     // lugar de dejar un pedido sin detalle.
     await db.from("orders").update({ status: "cancelled" }).eq("id", order.id);

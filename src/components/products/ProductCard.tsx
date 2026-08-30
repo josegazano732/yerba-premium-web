@@ -21,6 +21,8 @@ type ProductCardProps = {
 };
 
 export function ProductCard({ product, onAdd, onSelect }: Readonly<ProductCardProps>) {
+  const secondaryImage = product.images && product.images.length > 1 ? product.images[1] : null;
+
   const cardInner = (
     <>
       <div className="relative aspect-[4/4.3] overflow-hidden rounded-[6px] bg-secondary/35 shadow-[0_6px_16px_rgba(37,48,27,0.08)] ring-1 ring-[#e3ddcf]">
@@ -28,11 +30,23 @@ export function ProductCard({ product, onAdd, onSelect }: Readonly<ProductCardPr
           src={product.image}
           alt={`${product.name} — ${product.category}`}
           fill
-          className="object-cover transition duration-500 group-hover:scale-105"
+          className="object-cover transition duration-500 group-hover/image:scale-105 group-hover/image:opacity-0 group-focus-visible/image:opacity-0"
           sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
           loading="lazy"
           decoding="async"
         />
+        {secondaryImage ? (
+          <Image
+            src={secondaryImage}
+            alt=""
+            fill
+            aria-hidden
+            className="object-cover opacity-0 transition duration-500 group-hover/image:scale-105 group-hover/image:opacity-100 group-focus-visible/image:opacity-100"
+            sizes="(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+            loading="lazy"
+            decoding="async"
+          />
+        ) : null}
         {product.discount ? (
           <span className="absolute left-3 top-3 rounded bg-[#20341d] px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-white">
             {product.discount}
@@ -60,13 +74,13 @@ export function ProductCard({ product, onAdd, onSelect }: Readonly<ProductCardPr
         <button
           type="button"
           onClick={() => onSelect(product)}
-          className="text-left"
+          className="group/image text-left"
           aria-label={`Ver detalle de ${product.name}`}
         >
           {cardInner}
         </button>
       ) : (
-        <Link href={productUrl(product.name)} className="block text-left">
+        <Link href={productUrl(product.name)} className="group/image block text-left">
           {cardInner}
         </Link>
       )}

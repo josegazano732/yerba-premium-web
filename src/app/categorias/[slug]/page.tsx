@@ -13,7 +13,7 @@ import {
   productUrl
 } from "@/lib/seo";
 import { Container } from "@/components/ui/Container";
-import { ProductCard } from "@/components/products/ProductCard";
+import { CategoryProducts } from "@/components/products/CategoryProducts";
 
 /** Descripciones editoriales por categoría conocida. */
 const CATEGORY_META: Record<string, { heading: string; description: string }> = {
@@ -207,11 +207,7 @@ export default async function CategoryPage({
           </p>
 
           {products.length > 0 ? (
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-              {products.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
+            <CategoryProducts products={products} />
           ) : (
             <p className="text-muted">No hay productos disponibles en esta categoría por el momento.</p>
           )}

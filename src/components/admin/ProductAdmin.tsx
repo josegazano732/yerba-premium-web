@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { Check, PackageCheck, Plus, Search, Trash2, X } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import { ChangeEvent, FormEvent, useDeferredValue, useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
 import { AdminBranding } from "@/components/admin/AdminBranding";
@@ -275,7 +276,7 @@ export function ProductAdmin() {
       <header className="border-b border-[#d7dbd1] bg-[#1d2d1a] text-white">
         <div className="mx-auto flex max-w-[1500px] flex-col gap-5 px-4 py-7 sm:px-7 lg:flex-row lg:items-center lg:justify-between">
           <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#b9d282]">Panel de administración</p><h1 className="mt-1 font-serif text-4xl font-semibold">Productos</h1><p className="mt-1 text-xs text-white/60">{session.user.email}</p></div>
-          <div className="flex flex-wrap gap-3"><button type="button" onClick={openCreate} className="inline-flex h-11 items-center gap-2 bg-[#d7e68c] px-5 text-sm font-extrabold text-[#172116]"><Plus size={18} /> Nuevo producto</button><button type="button" onClick={() => supabase?.auth.signOut()} className="h-11 border border-white/25 px-5 text-sm font-bold hover:bg-white/10">Cerrar sesión</button></div>
+          <div className="flex flex-wrap gap-3"><button type="button" onClick={openCreate} className="inline-flex h-11 items-center gap-2 bg-[#d7e68c] px-5 text-sm font-extrabold text-[#172116]"><Plus size={18} /> Nuevo producto</button><Link href="/admin/ordenes" className="inline-flex h-11 items-center border border-white/25 px-5 text-sm font-bold transition hover:bg-white/10">Órdenes</Link><button type="button" onClick={() => supabase?.auth.signOut()} className="h-11 border border-white/25 px-5 text-sm font-bold hover:bg-white/10">Cerrar sesión</button></div>
         </div>
       </header>
 

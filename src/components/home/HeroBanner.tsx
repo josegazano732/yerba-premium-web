@@ -124,9 +124,6 @@ export function HeroBanner() {
                 Ver la tienda
                 <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
               </Button>
-              <Button href="/sobre-nosotros" variant="secondary" className="px-8 py-3.5 text-base">
-                Conocer la marca
-              </Button>
             </div>
           </motion.div>
         </Container>

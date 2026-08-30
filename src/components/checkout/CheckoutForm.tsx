@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useForm } from "react-hook-form";
+import { FieldErrors, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LoaderCircle, Lock, MapPin, ShoppingBag, Truck } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
@@ -39,7 +39,7 @@ const PROVINCES = [
 ];
 
 const inputClass =
-  "h-11 w-full rounded-[6px] border border-[#d7d2c7] bg-white px-3 text-sm text-[#20341d] outline-none transition placeholder:text-muted focus:border-primary";
+  "h-12 w-full rounded-[6px] border border-[#d7d2c7] bg-white px-3 text-sm text-[#20341d] outline-none transition placeholder:text-muted focus:border-primary";
 
 const labelClass = "mb-1.5 block text-xs font-bold uppercase tracking-wide text-[#20341d]";
 
@@ -76,6 +76,8 @@ export function CheckoutForm() {
   const postalCode = watch("postalCode");
   const shippingMethodId = watch("shippingMethodId");
   const selectedQuote = quotes.find((quote) => quote.id === shippingMethodId);
+  const shippingPrice = selectedQuote?.price ?? 0;
+  const total = subtotal + shippingPrice;
 
   useEffect(() => {
     setMounted(true);
@@ -104,6 +106,14 @@ export function CheckoutForm() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postalCode, subtotal]);
+
+  function onInvalid(errors: FieldErrors<CheckoutFormValues>) {
+    const firstKey = Object.keys(errors)[0];
+    if (!firstKey) return;
+    const field = document.querySelector<HTMLElement>(`[name="${firstKey}"]`);
+    field?.scrollIntoView({ behavior: "smooth", block: "center" });
+    field?.focus({ preventScroll: true });
+  }
 
   async function onSubmit(values: CheckoutFormValues) {
     setSubmitting(true);
@@ -185,17 +195,20 @@ export function CheckoutForm() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-5 py-10 sm:py-14">
+    <div className="mx-auto max-w-6xl px-5 pb-40 pt-10 sm:pb-44 sm:pt-14 lg:pb-14">
       <h1 className="font-serif text-3xl font-semibold uppercase tracking-[0.06em] text-[#20341d] sm:text-4xl">
         Finalizar compra
       </h1>
       <p className="mt-2 text-sm text-muted">Completá tus datos y elegí el envío para pagar con Mercado Pago.</p>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="mt-10 grid gap-10 lg:grid-cols-[1fr_24rem]">
+      <form id="checkout-form" noValidate onSubmit={handleSubmit(onSubmit, onInvalid)} className="mt-10 grid gap-10 lg:grid-cols-[1fr_24rem]">
         <div className="space-y-8">
           {/* Datos del cliente */}
           <section>
-            <h2 className="font-serif text-xl font-semibold text-[#20341d]">Datos del cliente</h2>
+            <h2 className="flex items-center gap-2.5 font-serif text-xl font-semibold text-[#20341d]">
+              <span className="inline-grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary">1</span>
+              Tus datos
+            </h2>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label htmlFor="name" className={labelClass}>Nombre y apellido</label>
@@ -217,7 +230,10 @@ export function CheckoutForm() {
 
           {/* Envío */}
           <section>
-            <h2 className="font-serif text-xl font-semibold text-[#20341d]">Datos de envío</h2>
+            <h2 className="flex items-center gap-2.5 font-serif text-xl font-semibold text-[#20341d]">
+              <span className="inline-grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary">2</span>
+              Envío
+            </h2>
             <div className="mt-5 grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label htmlFor="address" className={labelClass}>Dirección</label>
@@ -272,6 +288,7 @@ export function CheckoutForm() {
                       <label className={`flex cursor-pointer items-start gap-3 rounded-[6px] border p-3 transition ${shippingMethodId === quote.id ? "border-primary bg-primary/5" : "border-[#e2ddd3] hover:border-primary/40"}`}>
                         <input
                           type="radio"
+                          name="shippingMethodId"
                           value={quote.id}
                           checked={shippingMethodId === quote.id}
                           onChange={() => setValue("shippingMethodId", quote.id, { shouldValidate: true })}
@@ -296,7 +313,10 @@ export function CheckoutForm() {
 
         {/* Resumen del pedido */}
         <aside className="h-fit rounded-[10px] border border-[#e2ddd3] bg-white p-6 lg:sticky lg:top-32">
-          <h2 className="font-serif text-xl font-semibold text-[#20341d]">Resumen del pedido</h2>
+          <h2 className="flex items-center gap-2.5 font-serif text-xl font-semibold text-[#20341d]">
+            <span className="inline-grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary">3</span>
+            Resumen
+          </h2>
           <ul className="mt-5 space-y-4">
             {cart.map((item) => (
               <li key={item.product.id} className="flex items-center gap-3">
@@ -323,7 +343,7 @@ export function CheckoutForm() {
             </div>
             <div className="flex items-center justify-between border-t border-[#e2ddd3] pt-3">
               <span className="text-sm font-bold uppercase tracking-wide text-[#20341d]">Total</span>
-              <strong className="font-serif text-2xl text-[#20341d]">{formatCurrency.format(subtotal + (selectedQuote?.price ?? 0))}</strong>
+              <strong className="font-serif text-2xl text-[#20341d]">{formatCurrency.format(total)}</strong>
             </div>
           </div>
 
@@ -334,7 +354,7 @@ export function CheckoutForm() {
           <button
             type="submit"
             disabled={submitting}
-            className="mt-6 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-cta text-sm font-bold text-white transition hover:bg-cta-hover focus:outline-none focus:ring-2 focus:ring-cta focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-6 hidden h-12 w-full items-center justify-center gap-2 rounded-full bg-cta text-sm font-bold text-white transition hover:bg-cta-hover focus:outline-none focus:ring-2 focus:ring-cta focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 lg:flex"
           >
             {submitting ? <LoaderCircle size={18} className="animate-spin" /> : <Lock size={18} />}
             {submitting ? "Creando tu pedido…" : "Pagar con Mercado Pago"}
@@ -346,6 +366,28 @@ export function CheckoutForm() {
           </p>
         </aside>
       </form>
+
+      {/* Barra fija de pago (solo móvil) */}
+      <div
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-[#e2ddd3] bg-white/95 px-4 backdrop-blur lg:hidden"
+        style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
+      >
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 py-3">
+          <div className="min-w-0">
+            <p className="text-[11px] font-bold uppercase tracking-wide text-muted">Total</p>
+            <p className="truncate font-serif text-xl font-semibold text-[#20341d]">{formatCurrency.format(total)}</p>
+          </div>
+          <button
+            type="submit"
+            form="checkout-form"
+            disabled={submitting}
+            className="flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-cta px-6 text-sm font-bold text-white transition hover:bg-cta-hover focus:outline-none focus:ring-2 focus:ring-cta focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+          >
+            {submitting ? <LoaderCircle size={18} className="animate-spin" /> : <Lock size={18} />}
+            {submitting ? "Creando…" : "Pagar"}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

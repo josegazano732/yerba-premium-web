@@ -89,13 +89,13 @@ export function FeaturedProducts() {
   return (
     <section className="section-pad bg-white/60">
       <Container>
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <div className="max-w-xl">
+        <div className="relative">
+          <div className="mx-auto max-w-xl text-center">
             <Badge>Los mas elegidos</Badge>
             <h2 className="mt-4 font-serif text-3xl text-[#20341d] sm:text-4xl">Favoritos de la comunidad matera</h2>
           </div>
 
-          <div className="hidden items-center gap-3 sm:flex">
+          <div className="absolute right-0 top-1/2 hidden -translate-y-1/2 items-center gap-3 lg:flex">
             <button
               type="button"
               onClick={() => scrollByCard(-1)}

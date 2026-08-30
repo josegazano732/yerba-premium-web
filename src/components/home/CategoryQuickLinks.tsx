@@ -48,8 +48,8 @@ export function CategoryQuickLinks() {
   return (
     <section className="bg-background pb-4 pt-8 sm:pt-10" aria-labelledby="categorias-heading">
       <Container>
-        <div className="mb-6 flex items-end justify-between gap-4 sm:mb-8">
-          <div>
+        <div className="relative mb-6 sm:mb-8">
+          <div className="text-center">
             <Badge>Explorá el catálogo</Badge>
             <h2 id="categorias-heading" className="mt-3 font-serif text-2xl text-forest sm:text-3xl">
               Comprá por categoría
@@ -57,7 +57,7 @@ export function CategoryQuickLinks() {
           </div>
           <Link
             href="/productos"
-            className="hidden shrink-0 items-center gap-1.5 text-sm font-semibold text-primary transition hover:text-cta-hover sm:flex"
+            className="absolute right-0 top-1/2 hidden -translate-y-1/2 items-center gap-1.5 text-sm font-semibold text-primary transition hover:text-cta-hover sm:flex"
           >
             Ver todo
             <ArrowRight className="h-4 w-4" />

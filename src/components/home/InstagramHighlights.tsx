@@ -10,8 +10,8 @@ export function InstagramHighlights() {
   return (
     <section className="section-pad bg-background" aria-labelledby="instagram-heading">
       <Container>
-        <div className="mb-6 flex items-end justify-between gap-4 sm:mb-8">
-          <div>
+        <div className="relative mb-6 sm:mb-8">
+          <div className="text-center">
             <Badge>Instagram</Badge>
             <h2 id="instagram-heading" className="mt-3 font-serif text-2xl text-forest sm:text-3xl">
               La comunidad en acción
@@ -21,7 +21,7 @@ export function InstagramHighlights() {
             href={site.instagramUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden shrink-0 items-center gap-1.5 text-sm font-semibold text-primary transition hover:text-cta-hover sm:flex"
+            className="absolute right-0 top-1/2 hidden -translate-y-1/2 items-center gap-1.5 text-sm font-semibold text-primary transition hover:text-cta-hover sm:flex"
           >
             Seguinos en Instagram
             <ArrowRight className="h-4 w-4" aria-hidden="true" />

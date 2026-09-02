@@ -57,7 +57,15 @@ export function PromoBanner() {
   if (!image) return null;
 
   return (
-    <section className="bg-background py-16 sm:py-20">
+    <section className="relative isolate overflow-hidden bg-background py-16 sm:py-20">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 scale-105 bg-[url('/backgroun.jfif')] bg-cover bg-center opacity-40"
+      />
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 -z-10 bg-gradient-to-b from-background/70 via-background/50 to-background/70"
+      />
       <Container className="max-w-[92rem]">
         <div className="grid overflow-hidden rounded-[2rem] border border-[#7c925f]/25 bg-white/70 shadow-[0_28px_70px_-28px_rgba(32,52,29,0.35)] ring-1 ring-white/70 md:grid-cols-2">
           {/* Columna izquierda: imagen lifestyle a todo el alto */}

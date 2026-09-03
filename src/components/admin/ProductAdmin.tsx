@@ -6,8 +6,10 @@ import Image from "next/image";
 import Link from "next/link";
 import { ChangeEvent, FormEvent, useDeferredValue, useEffect, useState } from "react";
 import type { Session } from "@supabase/supabase-js";
+import { AdminParameters } from "@/components/admin/AdminParameters";
 import { AdminBranding } from "@/components/admin/AdminBranding";
 import { AdminHeroBanner } from "@/components/admin/AdminHeroBanner";
+import { WholesaleCatalogAdmin } from "@/components/admin/WholesaleCatalogAdmin";
 import { promoBannerPath, promoBannerSlots, promoBannerUrl } from "@/components/home/PromoBanner";
 import { supabase } from "@/lib/supabase";
 
@@ -83,6 +85,7 @@ export function ProductAdmin() {
   const [editingProduct, setEditingProduct] = useState<AdminProduct | null>(null);
   const [deletingProduct, setDeletingProduct] = useState<AdminProduct | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<"products" | "wholesale" | "parameters">("products");
   const [form, setForm] = useState<ProductForm>(emptyForm);
   const [productImages, setProductImages] = useState<File[]>([]);
   const [existingImages, setExistingImages] = useState<string[]>([]);
@@ -277,7 +280,7 @@ export function ProductAdmin() {
       <header className="border-b border-[#d7dbd1] bg-[#1d2d1a] text-white">
         <div className="mx-auto flex max-w-[1500px] flex-col gap-5 px-4 py-7 sm:px-7 lg:flex-row lg:items-center lg:justify-between">
           <div><p className="text-xs font-bold uppercase tracking-[0.16em] text-[#b9d282]">Panel de administración</p><h1 className="mt-1 font-serif text-4xl font-semibold">Productos</h1><p className="mt-1 text-xs text-white/60">{session.user.email}</p></div>
-          <div className="flex flex-wrap gap-3"><button type="button" onClick={openCreate} className="inline-flex h-11 items-center gap-2 bg-[#d7e68c] px-5 text-sm font-extrabold text-[#172116]"><Plus size={18} /> Nuevo producto</button><Link href="/admin/ordenes" className="inline-flex h-11 items-center border border-white/25 px-5 text-sm font-bold transition hover:bg-white/10">Órdenes</Link><button type="button" onClick={() => supabase?.auth.signOut()} className="h-11 border border-white/25 px-5 text-sm font-bold hover:bg-white/10">Cerrar sesión</button></div>
+          <div className="flex flex-wrap gap-3">{activeTab === "products" ? <button type="button" onClick={openCreate} className="inline-flex h-11 items-center gap-2 bg-[#d7e68c] px-5 text-sm font-extrabold text-[#172116]"><Plus size={18} /> Nuevo producto</button> : null}<Link href="/admin/ordenes" className="inline-flex h-11 items-center border border-white/25 px-5 text-sm font-bold transition hover:bg-white/10">Órdenes</Link><button type="button" onClick={() => supabase?.auth.signOut()} className="h-11 border border-white/25 px-5 text-sm font-bold hover:bg-white/10">Cerrar sesión</button></div>
         </div>
       </header>
 
@@ -288,38 +291,52 @@ export function ProductAdmin() {
           <div className="border border-[#d9dcd3] bg-white p-5"><p className="text-xs font-bold uppercase tracking-wider text-muted">Categorías</p><p className="mt-2 font-serif text-4xl font-semibold">{categories.length}</p></div>
         </div>
 
-        <AdminBranding />
+        <div className="mt-6 flex flex-wrap gap-2 border-b border-[#d9dcd3] pb-4">
+          <button type="button" onClick={() => setActiveTab("products")} className={`h-10 px-4 text-xs font-bold uppercase tracking-[0.12em] transition ${activeTab === "products" ? "bg-[#20341d] text-white" : "border border-[#cfd4c9] bg-white text-[#20341d] hover:border-primary"}`}>Productos</button>
+          <button type="button" onClick={() => setActiveTab("wholesale")} className={`h-10 px-4 text-xs font-bold uppercase tracking-[0.12em] transition ${activeTab === "wholesale" ? "bg-[#20341d] text-white" : "border border-[#cfd4c9] bg-white text-[#20341d] hover:border-primary"}`}>Catalogos mayoristas</button>
+          <button type="button" onClick={() => setActiveTab("parameters")} className={`h-10 px-4 text-xs font-bold uppercase tracking-[0.12em] transition ${activeTab === "parameters" ? "bg-[#20341d] text-white" : "border border-[#cfd4c9] bg-white text-[#20341d] hover:border-primary"}`}>Parametros</button>
+        </div>
 
-        <AdminHeroBanner />
+        {activeTab === "products" ? (
+          <>
+            <AdminBranding />
 
-        <AdminHeroBanner
-          eyebrow="Promociones"
-          title="Banner promocional"
-          description="Imagen apaisada que se muestra debajo de 'Los mas elegidos' en el inicio y enlaza al catálogo. Si no cargás ninguna, la sección no aparece."
-          slots={promoBannerSlots}
-          pathFor={promoBannerPath}
-          urlFor={promoBannerUrl}
-          slotLabel="Banner promocional"
-          hint="Recomendado: 1400 x 770 px, PNG/JPG/WebP, máximo 6 MB. Se convierte automáticamente a WebP."
-        />
+            <AdminHeroBanner />
 
-        <section className="mt-6 border border-[#d9dcd3] bg-white">
-          <div className="flex flex-col gap-4 border-b border-[#e0e2dc] p-4 sm:flex-row sm:items-center sm:justify-between">
-            <label className="relative w-full sm:max-w-sm"><span className="sr-only">Buscar productos</span><Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar producto o categoría" className="h-11 w-full border border-[#cfd4c9] pl-10 pr-4 text-sm outline-none focus:border-primary" /></label>
-            <button type="button" onClick={() => void loadCatalog()} className="h-11 border border-[#cfd4c9] px-4 text-sm font-bold hover:bg-[#f3f1ea]">Actualizar listado</button>
-          </div>
-          {message ? <p role="status" className="border-b border-[#e0e2dc] bg-[#f5f7f1] px-4 py-3 text-sm font-semibold text-[#385133]">{message}</p> : null}
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[850px] border-collapse text-left text-sm">
-              <thead className="bg-[#f5f4ef] text-xs uppercase tracking-wider text-muted"><tr><th className="px-4 py-3">Producto</th><th className="px-4 py-3">Categoría</th><th className="px-4 py-3">Precio</th><th className="px-4 py-3">Stock</th><th className="px-4 py-3">Estado</th><th className="px-4 py-3 text-right">Acciones</th></tr></thead>
-              <tbody className="divide-y divide-[#e5e6e1]">
-                {filteredProducts.map((product) => <tr key={product.id} className="hover:bg-[#fafaf7]"><td className="max-w-sm px-4 py-4 font-bold text-[#1d2d1a]">{product.name}</td><td className="px-4 py-4 text-muted">{product.category_name ?? "Sin categoría"}</td><td className="px-4 py-4 font-bold">{currency.format(Number(product.price ?? 0))}</td><td className="px-4 py-4"><span className={Number(product.stock) > 0 ? "text-[#385133]" : "font-bold text-red-700"}>{Number(product.stock ?? 0)}</span></td><td className="px-4 py-4"><span className="inline-flex rounded-full bg-[#e8eee3] px-2.5 py-1 text-xs font-bold text-[#385133]">{product.seasonal ? "Temporada" : "Activo"}</span></td><td className="px-4 py-4"><div className="flex justify-end gap-2"><button type="button" onClick={() => openEdit(product)} className="h-9 border border-[#cfd4c9] px-3 text-xs font-bold hover:border-primary">Editar</button><button type="button" onClick={() => setDeletingProduct(product)} className="grid h-9 w-9 place-items-center border border-[#e2caca] text-red-700 hover:bg-red-50" aria-label={`Eliminar ${product.name}`}><Trash2 size={16} /></button></div></td></tr>)}
-              </tbody>
-            </table>
-          </div>
-          {loading ? <p className="p-8 text-center text-sm font-bold text-muted">Cargando productos...</p> : null}
-          {!loading && filteredProducts.length === 0 ? <p className="p-10 text-center text-sm text-muted">No hay productos que coincidan con la búsqueda.</p> : null}
-        </section>
+            <AdminHeroBanner
+              eyebrow="Promociones"
+              title="Banner promocional"
+              description="Imagen apaisada que se muestra debajo de 'Los mas elegidos' en el inicio y enlaza al catálogo. Si no cargás ninguna, la sección no aparece."
+              slots={promoBannerSlots}
+              pathFor={promoBannerPath}
+              urlFor={promoBannerUrl}
+              slotLabel="Banner promocional"
+              hint="Recomendado: 1400 x 770 px, PNG/JPG/WebP, máximo 6 MB. Se convierte automáticamente a WebP."
+            />
+
+            <section className="mt-6 border border-[#d9dcd3] bg-white">
+              <div className="flex flex-col gap-4 border-b border-[#e0e2dc] p-4 sm:flex-row sm:items-center sm:justify-between">
+                <label className="relative w-full sm:max-w-sm"><span className="sr-only">Buscar productos</span><Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar producto o categoría" className="h-11 w-full border border-[#cfd4c9] pl-10 pr-4 text-sm outline-none focus:border-primary" /></label>
+                <button type="button" onClick={() => void loadCatalog()} className="h-11 border border-[#cfd4c9] px-4 text-sm font-bold hover:bg-[#f3f1ea]">Actualizar listado</button>
+              </div>
+              {message ? <p role="status" className="border-b border-[#e0e2dc] bg-[#f5f7f1] px-4 py-3 text-sm font-semibold text-[#385133]">{message}</p> : null}
+              <div className="overflow-x-auto">
+                <table className="w-full min-w-[850px] border-collapse text-left text-sm">
+                  <thead className="bg-[#f5f4ef] text-xs uppercase tracking-wider text-muted"><tr><th className="px-4 py-3">Producto</th><th className="px-4 py-3">Categoría</th><th className="px-4 py-3">Precio</th><th className="px-4 py-3">Stock</th><th className="px-4 py-3">Estado</th><th className="px-4 py-3 text-right">Acciones</th></tr></thead>
+                  <tbody className="divide-y divide-[#e5e6e1]">
+                    {filteredProducts.map((product) => <tr key={product.id} className="hover:bg-[#fafaf7]"><td className="max-w-sm px-4 py-4 font-bold text-[#1d2d1a]">{product.name}</td><td className="px-4 py-4 text-muted">{product.category_name ?? "Sin categoría"}</td><td className="px-4 py-4 font-bold">{currency.format(Number(product.price ?? 0))}</td><td className="px-4 py-4"><span className={Number(product.stock) > 0 ? "text-[#385133]" : "font-bold text-red-700"}>{Number(product.stock ?? 0)}</span></td><td className="px-4 py-4"><span className="inline-flex rounded-full bg-[#e8eee3] px-2.5 py-1 text-xs font-bold text-[#385133]">{product.seasonal ? "Temporada" : "Activo"}</span></td><td className="px-4 py-4"><div className="flex justify-end gap-2"><button type="button" onClick={() => openEdit(product)} className="h-9 border border-[#cfd4c9] px-3 text-xs font-bold hover:border-primary">Editar</button><button type="button" onClick={() => setDeletingProduct(product)} className="grid h-9 w-9 place-items-center border border-[#e2caca] text-red-700 hover:bg-red-50" aria-label={`Eliminar ${product.name}`}><Trash2 size={16} /></button></div></td></tr>)}
+                  </tbody>
+                </table>
+              </div>
+              {loading ? <p className="p-8 text-center text-sm font-bold text-muted">Cargando productos...</p> : null}
+              {!loading && filteredProducts.length === 0 ? <p className="p-10 text-center text-sm text-muted">No hay productos que coincidan con la búsqueda.</p> : null}
+            </section>
+          </>
+        ) : null}
+
+        {activeTab === "wholesale" ? <WholesaleCatalogAdmin categories={categories} /> : null}
+
+        {activeTab === "parameters" ? <AdminParameters onCategoriesChanged={loadCatalog} /> : null}
       </div>
 
       <AnimatePresence>

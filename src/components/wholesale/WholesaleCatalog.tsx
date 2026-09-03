@@ -8,6 +8,12 @@ import { Container } from "@/components/ui/Container";
 import { mapProductDetails, Product, ProductDetailsRow } from "@/data/products";
 import { site } from "@/data/site";
 import { supabase } from "@/lib/supabase";
+import {
+  DEFAULT_WHOLESALE_CATALOGS,
+  calculateMarginPricing,
+  normalizeMarginPercentage,
+  type WholesaleCatalogConfig
+} from "@/lib/wholesale";
 
 /** `grams: null` = producto que se vende por unidad, no fraccionado. */
 type Presentation = { grams: number | null; label: string; customUnit?: boolean };
@@ -26,15 +32,6 @@ const CUSTOM_UNIT_PRICE_MULTIPLIER = 1.5;
 
 /** Descripcion generica que agrega `mapProductDetails` cuando el producto no tiene texto propio. */
 const GENERIC_DESCRIPTION = "Producto seleccionado de nuestra tienda.";
-
-const CATALOGS = [
-  {
-    id: "hierbas",
-    title: "Catalogo de Hierbas",
-    category: "Hierbas",
-    description: "Hierbas serranas, aromaticas y secos fraccionados para revendedores y dieteticas."
-  }
-];
 
 const currency = new Intl.NumberFormat("es-AR", {
   style: "currency",
@@ -72,6 +69,8 @@ function normalizeCustomGrams(raw: string) {
 
 export function WholesaleCatalog() {
   const [catalogId, setCatalogId] = useState<string | null>(null);
+  const [catalogs, setCatalogs] = useState<WholesaleCatalogConfig[]>(DEFAULT_WHOLESALE_CATALOGS);
+  const [marginPercentage, setMarginPercentage] = useState(DEFAULT_WHOLESALE_CATALOGS[0]?.suggestedMarginPercentage ?? 30);
   const [products, setProducts] = useState<Product[]>([]);
   const [categoryImages, setCategoryImages] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(true);
@@ -142,60 +141,106 @@ export function WholesaleCatalog() {
 
   useEffect(() => {
     const requested = decodeURIComponent(window.location.hash.replace("#", "")).trim().toLowerCase();
-    if (CATALOGS.some((catalog) => catalog.id === requested)) setCatalogId(requested);
-  }, []);
+    if (catalogs.some((catalog) => catalog.slug === requested)) setCatalogId(requested);
+  }, [catalogs]);
 
   useEffect(() => {
-    if (!supabase) {
+    const db = supabase;
+    if (!db) {
       setIsLoading(false);
       setLoadError("No pudimos conectarnos al catalogo mayorista.");
       return;
     }
 
     let active = true;
-    const categoryNames = CATALOGS.map((catalog) => catalog.category);
+    Promise.resolve()
+      .then(async () => {
+        const catalogsResult = await db
+          .from("wholesale_catalogs")
+          .select("id,slug,title,category_name,description,hero_image_url,suggested_margin_percentage,is_active,display_order")
+          .eq("is_active", true)
+          .order("display_order", { ascending: true })
+          .order("title", { ascending: true });
 
-    Promise.all([
-      supabase
-        .from("product_details")
-        .select("id,name,description,price,image,image_urls,category_name,unit_of_measure,stock,seasonal")
-        .in("category_name", categoryNames)
-        .order("name"),
-      supabase
-        .from("product_categories")
-        .select("name,image_url")
-        .in("name", categoryNames)
-    ]).then(([productsResult, categoriesResult]) => {
-      if (!active) return;
-      setIsLoading(false);
-      if (productsResult.error) {
+        const mappedCatalogs =
+          ((catalogsResult.data ?? []) as Array<{
+            id: string;
+            slug: string;
+            title: string;
+            category_name: string;
+            description: string | null;
+            hero_image_url: string | null;
+            suggested_margin_percentage: number | string | null;
+            is_active: boolean | null;
+            display_order: number | null;
+          }>).map((row) => ({
+            id: row.id,
+            slug: row.slug,
+            title: row.title,
+            categoryName: row.category_name,
+            description: row.description ?? "",
+            heroImageUrl: row.hero_image_url,
+            suggestedMarginPercentage: normalizeMarginPercentage(Number(row.suggested_margin_percentage ?? 30)),
+            isActive: row.is_active ?? true,
+            displayOrder: Number(row.display_order ?? 1)
+          })) ?? [];
+
+        const resolvedCatalogs = mappedCatalogs.length > 0 ? mappedCatalogs : DEFAULT_WHOLESALE_CATALOGS;
+        const categoryNames = [...new Set(resolvedCatalogs.map((catalog) => catalog.categoryName))];
+
+        const [productsResult, categoriesResult] = await Promise.all([
+          db
+            .from("product_details")
+            .select("id,name,description,price,image,image_urls,category_name,unit_of_measure,stock,seasonal")
+            .in("category_name", categoryNames)
+            .order("name"),
+          db
+            .from("product_categories")
+            .select("name,image_url")
+            .in("name", categoryNames)
+        ]);
+
+        if (!active) return;
+        setCatalogs(resolvedCatalogs);
+        setIsLoading(false);
+        if (productsResult.error) {
+          setLoadError("No pudimos cargar el catalogo mayorista.");
+          return;
+        }
+        setProducts(
+          (productsResult.data as ProductDetailsRow[] | null)
+            ?.map(mapProductDetails)
+            .filter((product): product is Product => product !== null) ?? []
+        );
+        const images: Record<string, string> = {};
+        ((categoriesResult.data ?? []) as { name: string; image_url: string | null }[]).forEach((cat) => {
+          if (cat.image_url) images[cat.name] = cat.image_url;
+        });
+        setCategoryImages(images);
+      })
+      .catch(() => {
+        if (!active) return;
+        setIsLoading(false);
         setLoadError("No pudimos cargar el catalogo mayorista.");
-        return;
-      }
-      setProducts(
-        (productsResult.data as ProductDetailsRow[] | null)
-          ?.map(mapProductDetails)
-          .filter((product): product is Product => product !== null) ?? []
-      );
-      const images: Record<string, string> = {};
-      ((categoriesResult.data ?? []) as { name: string; image_url: string | null }[]).forEach((cat) => {
-        if (cat.image_url) images[cat.name] = cat.image_url;
       });
-      setCategoryImages(images);
-    });
 
     return () => {
       active = false;
     };
   }, []);
 
-  const activeCatalog = CATALOGS.find((catalog) => catalog.id === catalogId) ?? null;
+  const activeCatalog = catalogs.find((catalog) => catalog.slug === catalogId) ?? null;
+
+  useEffect(() => {
+    if (!activeCatalog) return;
+    setMarginPercentage(activeCatalog.suggestedMarginPercentage);
+  }, [activeCatalog]);
 
   const visibleProducts = useMemo(() => {
     if (!activeCatalog) return [];
     const search = query.trim().toLowerCase();
     const filtered = products
-      .filter((product) => product.category === activeCatalog.category)
+      .filter((product) => product.category === activeCatalog.categoryName)
       .filter((product) => product.name.toLowerCase().includes(search));
     return [...filtered.filter(isSoldByWeight), ...filtered.filter((p) => !isSoldByWeight(p))];
   }, [activeCatalog, products, query]);
@@ -237,8 +282,8 @@ export function WholesaleCatalog() {
       await downloadCatalogPdf({
         title: activeCatalog.title,
         intro:
-          "Venta exclusiva mayorista. Las hierbas a granel se fraccionan en 1000 g, 500 g y 250 g. Tambien podes definir una unidad personalizada entre 20 g y 100 g; el resto se vende por unidad. Coordinamos disponibilidad, condiciones y envio por WhatsApp.",
-        fileName: `lista-precios-${activeCatalog.id}.pdf`,
+          `Venta exclusiva mayorista. Las hierbas a granel se fraccionan en 1000 g, 500 g y 250 g. Tambien podes definir una unidad personalizada entre 20 g y 100 g; el resto se vende por unidad. Margen sugerido para reventa: ${normalizeMarginPercentage(marginPercentage)}%. Coordinamos disponibilidad, condiciones y envio por WhatsApp.`,
+        fileName: `lista-precios-${activeCatalog.slug}.pdf`,
         items: visibleProducts.map((product) => ({
           name: product.name,
           image: product.image,
@@ -323,18 +368,18 @@ export function WholesaleCatalog() {
         </p>
 
         <div className="mt-10 grid gap-5 sm:grid-cols-2">
-          {CATALOGS.map((catalog) => (
+          {catalogs.map((catalog) => (
             <button
               key={catalog.id}
               type="button"
-              onClick={() => setCatalogId(catalog.id)}
+              onClick={() => setCatalogId(catalog.slug)}
               className="group overflow-hidden rounded-[8px] border border-primary/15 bg-white text-left shadow-sm transition hover:border-primary/40 hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-accent"
             >
               {/* Cabecera con imagen de la categoría */}
               <div className="relative h-44 overflow-hidden bg-[#20341d]">
-                {categoryImages[catalog.category] ? (
+                {catalog.heroImageUrl || categoryImages[catalog.categoryName] ? (
                   <Image
-                    src={categoryImages[catalog.category]}
+                    src={catalog.heroImageUrl ?? categoryImages[catalog.categoryName]}
                     alt={catalog.title}
                     fill
                     sizes="(max-width: 640px) 100vw, 50vw"
@@ -380,12 +425,12 @@ export function WholesaleCatalog() {
             <p className="text-xs font-extrabold uppercase tracking-[0.22em] text-primary">Venta mayorista</p>
             <h1 className="mt-2 font-serif text-4xl font-semibold text-[#20341d]">{activeCatalog.title}</h1>
             <p className="mt-2 max-w-xl text-sm leading-6 text-muted">
-              Las hierbas a granel se piden en 1000 g, 500 g o 250 g. Tambien podes definir una unidad personalizada entre 20 g
-              y 100 g; el resto por unidad. Armas el pedido y nos lo envias por WhatsApp.
+              {activeCatalog.description ||
+                "Las hierbas a granel se piden en 1000 g, 500 g o 250 g. Tambien podes definir una unidad personalizada entre 20 g y 100 g; el resto por unidad. Armas el pedido y nos lo envias por WhatsApp."}
             </p>
           </div>
 
-          <div className="w-full lg:max-w-xs">
+          <div className="w-full space-y-3 lg:max-w-sm">
             <label className="relative block">
               <span className="sr-only">Buscar en el catalogo</span>
               <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted" />
@@ -514,6 +559,8 @@ export function WholesaleCatalog() {
                         ) : null}
                         {presentations.map((presentation) => {
                           const quantity = quantities.get(lineKey(product.id, presentation.grams, presentation.customUnit === true)) ?? 0;
+                          const baseUnitPrice = priceFor(product, presentation.grams, presentation.customUnit === true);
+                          const pricing = calculateMarginPricing(baseUnitPrice, marginPercentage);
                           return (
                             <div
                               key={`${presentation.grams ?? "unidad"}-${presentation.customUnit ? "custom" : "std"}`}
@@ -523,9 +570,12 @@ export function WholesaleCatalog() {
                             >
                               <div className="min-w-0">
                                 <p className="text-sm font-bold text-[#20341d]">{presentation.label}</p>
-                                <p className="text-xs font-semibold text-muted">
-                                  {currency.format(priceFor(product, presentation.grams, presentation.customUnit === true))} c/u
-                                </p>
+                                <div className="mt-1 space-y-0.5 text-[11px] leading-4 text-muted">
+                                  <p>Compra neta: {currency.format(pricing.purchaseNet)}</p>
+                                  <p>Venta neta ({pricing.marginPercentage}%): {currency.format(pricing.saleNet)}</p>
+                                  <p>IVA 21%: {currency.format(pricing.vat)}</p>
+                                  <p className="font-bold text-[#385133]">Gondola: {currency.format(pricing.shelfPrice)}</p>
+                                </div>
                               </div>
 
                               {quantity > 0 ? (

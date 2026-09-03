@@ -59,9 +59,16 @@ export function Footer() {
   }
 
   return (
-    <footer className="bg-background text-forest">
-      <Container className="pt-16">
-        <div className="relative">
+    <footer className="relative isolate overflow-hidden bg-background text-forest">
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 bg-cover bg-center bg-no-repeat opacity-30"
+        style={{ backgroundImage: "url('/images/footer/footer-bg.png')" }}
+      />
+      <Container className="relative z-10 pt-16">
+        <div
+          className="relative"
+        >
           <div className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2 bg-background px-6">
             <Link href="/" aria-label="Inicio" className="block">
               <BrandLogo />
@@ -136,7 +143,7 @@ export function Footer() {
         </div>
       </Container>
 
-      <div className="mt-12 border-t border-primary/10 bg-[#efe9dd]">
+      <div className="relative z-10 mt-12 border-t border-primary/10 bg-background/40">
         <Container className="flex flex-col gap-2 py-5 pb-24 text-xs text-muted sm:flex-row sm:items-center sm:justify-between sm:pb-5 sm:pr-24 lg:pr-28">
           <p>Copyright Mate Tierra - 2026. Todos los derechos reservados.</p>
           <p>

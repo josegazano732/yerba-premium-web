@@ -36,7 +36,7 @@ export function ProductDetail({ product, related, onAdd, onSelect, onClose }: Re
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-[85] overflow-y-auto bg-background">
+    <div className="fixed inset-x-0 bottom-0 top-[7.5rem] z-[85] overflow-y-auto bg-background">
       <motion.div
         initial={{ opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
@@ -44,7 +44,7 @@ export function ProductDetail({ product, related, onAdd, onSelect, onClose }: Re
         role="dialog"
         aria-modal="true"
         aria-label={product.name}
-        className="mx-auto w-full max-w-6xl px-4 pb-20 pt-6 sm:px-6"
+        className="mx-auto w-full max-w-6xl px-4 pb-20 pt-4 sm:px-6"
       >
         <div className="flex justify-end">
           <button type="button" onClick={onClose} className="grid h-11 w-11 place-items-center rounded-full border border-[#d7d2c7] bg-white transition hover:border-primary" aria-label="Cerrar detalle">

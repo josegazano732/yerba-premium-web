@@ -10,7 +10,6 @@ import { site } from "@/data/site";
 import { supabase } from "@/lib/supabase";
 import {
   DEFAULT_WHOLESALE_CATALOGS,
-  calculateMarginPricing,
   normalizeMarginPercentage,
   type WholesaleCatalogConfig
 } from "@/lib/wholesale";
@@ -560,7 +559,6 @@ export function WholesaleCatalog() {
                         {presentations.map((presentation) => {
                           const quantity = quantities.get(lineKey(product.id, presentation.grams, presentation.customUnit === true)) ?? 0;
                           const baseUnitPrice = priceFor(product, presentation.grams, presentation.customUnit === true);
-                          const pricing = calculateMarginPricing(baseUnitPrice, marginPercentage);
                           return (
                             <div
                               key={`${presentation.grams ?? "unidad"}-${presentation.customUnit ? "custom" : "std"}`}
@@ -570,12 +568,9 @@ export function WholesaleCatalog() {
                             >
                               <div className="min-w-0">
                                 <p className="text-sm font-bold text-[#20341d]">{presentation.label}</p>
-                                <div className="mt-1 space-y-0.5 text-[11px] leading-4 text-muted">
-                                  <p>Compra neta: {currency.format(pricing.purchaseNet)}</p>
-                                  <p>Venta neta ({pricing.marginPercentage}%): {currency.format(pricing.saleNet)}</p>
-                                  <p>IVA 21%: {currency.format(pricing.vat)}</p>
-                                  <p className="font-bold text-[#385133]">Gondola: {currency.format(pricing.shelfPrice)}</p>
-                                </div>
+                                <p className="mt-1 text-sm font-bold text-[#385133]">
+                                  Precio NETO: {currency.format(baseUnitPrice)}
+                                </p>
                               </div>
 
                               {quantity > 0 ? (

@@ -212,7 +212,7 @@ export function AiMatera() {
           <>
             {/* Overlay */}
             <motion.div
-              className="fixed inset-0 z-50 bg-[#11180f]/60 backdrop-blur-sm"
+              className="fixed inset-0 z-[100] bg-[#11180f]/60 backdrop-blur-sm"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -230,7 +230,7 @@ export function AiMatera() {
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 40 }}
               transition={{ duration: 0.25, ease: [0.32, 0.72, 0, 1] }}
-              className="fixed inset-x-0 bottom-0 z-50 flex max-h-[92dvh] flex-col overflow-hidden rounded-t-3xl bg-[#faf7f2] shadow-2xl sm:inset-6 sm:mx-auto sm:max-w-5xl sm:rounded-2xl"
+              className="fixed inset-x-0 bottom-0 z-[100] flex max-h-[92dvh] flex-col overflow-hidden rounded-t-3xl bg-[#faf7f2] shadow-2xl sm:inset-6 sm:mx-auto sm:max-w-5xl sm:rounded-2xl"
             >
               {/* Handle bar — solo visible en mobile */}
               <div className="flex shrink-0 justify-center pt-3 pb-1 sm:hidden">

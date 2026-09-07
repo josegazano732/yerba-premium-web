@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import type { ChatCompletionMessageParam } from "openai/resources/chat/completions";
 import { getOpenAIClient } from "@/lib/ai/openai";
 import { AI_TOOLS } from "@/lib/ai/tools";
-import { SYSTEM_PROMPT } from "@/lib/ai/prompt";
+import { buildSystemPrompt } from "@/lib/ai/prompt";
+import { getStoredSystemPrompt } from "@/lib/ai/settings";
 import { executeTool } from "@/lib/ai/execute-tool";
 import type { AiChatRequest, AiChatResponse, CartAction } from "@/lib/ai/types";
 import type { Product } from "@/data/products";
@@ -40,8 +41,12 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const contextNote = `\n\n[CONTEXTO DE SESIÓN]\n${JSON.stringify(sessionContext, null, 2)}\n[/CONTEXTO DE SESIÓN]`;
 
+    // El prompt guardado desde el panel tiene prioridad; si no existe se usa
+    // la variable de entorno AI_SYSTEM_PROMPT y, en última instancia, el default.
+    const storedPrompt = await getStoredSystemPrompt();
+
     const messages: ChatCompletionMessageParam[] = [
-      { role: "system", content: SYSTEM_PROMPT + contextNote },
+      { role: "system", content: buildSystemPrompt({ prompt: storedPrompt ?? undefined }) + contextNote },
       ...history.slice(-16).map((m): ChatCompletionMessageParam => ({ role: m.role, content: m.content })),
       { role: "user", content: message }
     ];

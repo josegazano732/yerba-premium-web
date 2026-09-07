@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useState } from "react";
-import { Check, Plus } from "lucide-react";
+import { Check, Eye, Plus, X } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { DEFAULT_MARGIN_PROFILES, normalizeMarginPercentage, slugifyCatalog, type WholesaleMarginProfile } from "@/lib/wholesale";
 
@@ -22,6 +22,19 @@ type ProductSubcategory = {
   display_order: number | null;
 };
 
+type AiPreview = {
+  source: "custom" | "env" | "default";
+  mode: "custom" | "default";
+  prompt: string;
+  storedPrompt: string;
+};
+
+const SOURCE_LABELS: Record<AiPreview["source"], string> = {
+  custom: "Personalizado (guardado en el panel)",
+  env: "Variable de entorno (AI_SYSTEM_PROMPT)",
+  default: "Predeterminado (codigo)",
+};
+
 type AdminParametersProps = {
   onCategoriesChanged?: () => Promise<void> | void;
 };
@@ -39,11 +52,21 @@ export function AdminParameters({ onCategoriesChanged }: Readonly<AdminParameter
   const [isSavingCategory, setIsSavingCategory] = useState(false);
   const [isSavingSubcategory, setIsSavingSubcategory] = useState(false);
   const [isSavingMargins, setIsSavingMargins] = useState(false);
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [aiPromptMode, setAiPromptMode] = useState<"custom" | "default">("default");
+  const [isLoadingAi, setIsLoadingAi] = useState(false);
+  const [isSavingAi, setIsSavingAi] = useState(false);
+  const [aiPreview, setAiPreview] = useState<AiPreview | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
 
   useEffect(() => {
     void loadParameters();
+  }, []);
+
+  useEffect(() => {
+    void loadAiPrompt();
   }, []);
 
   async function loadParameters(preferredSubcategoryCategoryId = "") {
@@ -104,6 +127,109 @@ export function AdminParameters({ onCategoriesChanged }: Readonly<AdminParameter
       })) ?? [];
 
     setMarginProfiles(mappedMargins.length > 0 ? mappedMargins : DEFAULT_MARGIN_PROFILES);
+  }
+
+  async function loadAiPrompt() {
+    if (!supabase) return;
+    setIsLoadingAi(true);
+
+    const { data, error } = await supabase
+      .from("site_settings")
+      .select("key,value")
+      .in("key", ["ai_system_prompt", "ai_system_prompt_mode"]);
+
+    setIsLoadingAi(false);
+
+    // Si la tabla no existe todavía o no hay acceso, se mantiene el prompt por defecto.
+    if (error) return;
+
+    const rows = (data ?? []) as Array<{ key: string; value: string | null }>;
+    const promptRow = rows.find((row) => row.key === "ai_system_prompt");
+    const modeRow = rows.find((row) => row.key === "ai_system_prompt_mode");
+
+    setAiPrompt(typeof promptRow?.value === "string" ? promptRow.value : "");
+    setAiPromptMode(modeRow?.value === "custom" ? "custom" : "default");
+  }
+
+  async function saveAiPrompt(valueOverride?: string) {
+    if (!supabase) return;
+    setIsSavingAi(true);
+    setMessage("");
+    setIsError(false);
+
+    const value = (valueOverride ?? aiPrompt).trim();
+    const mode: "custom" | "default" = value ? "custom" : "default";
+
+    const { error } = await supabase
+      .from("site_settings")
+      .upsert(
+        [
+          { key: "ai_system_prompt", value },
+          { key: "ai_system_prompt_mode", value: mode },
+        ],
+        { onConflict: "key" }
+      );
+
+    setIsSavingAi(false);
+
+    if (error) {
+      setIsError(true);
+      setMessage(`No se pudo guardar el prompt: ${error.message}`);
+      return;
+    }
+
+    setAiPrompt(value);
+    setAiPromptMode(mode);
+    setMessage(value ? "Prompt del agente actualizado." : "Prompt restablecido al valor por defecto.");
+  }
+
+  async function saveAiPromptMode(nextMode: "custom" | "default") {
+    if (!supabase) return;
+    setIsSavingAi(true);
+    setMessage("");
+    setIsError(false);
+
+    const { error } = await supabase
+      .from("site_settings")
+      .upsert({ key: "ai_system_prompt_mode", value: nextMode }, { onConflict: "key" });
+
+    setIsSavingAi(false);
+
+    if (error) {
+      setIsError(true);
+      setMessage(`No se pudo guardar el modo: ${error.message}`);
+      return;
+    }
+
+    setAiPromptMode(nextMode);
+    setMessage(nextMode === "custom" ? "Modo personalizado activado." : "Modo predeterminado activado.");
+  }
+
+  async function loadAiPreview() {
+    if (!supabase) return;
+    setIsLoadingPreview(true);
+    setMessage("");
+    setIsError(false);
+
+    const { data } = await supabase.auth.getSession();
+    const token = data.session?.access_token ?? "";
+
+    const response = await fetch("/api/admin/ai-settings", {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      cache: "no-store",
+    });
+
+    setIsLoadingPreview(false);
+
+    if (!response.ok) {
+      const body = (await response.json().catch(() => null)) as { error?: string } | null;
+      setIsError(true);
+      setMessage(body?.error ?? "No se pudo cargar el prompt activo.");
+      return;
+    }
+
+    const body = (await response.json()) as AiPreview;
+    setAiPreview(body);
   }
 
   async function saveCategory(event: FormEvent<HTMLFormElement>) {
@@ -211,7 +337,8 @@ export function AdminParameters({ onCategoriesChanged }: Readonly<AdminParameter
   }
 
   return (
-    <section className="mt-6 border border-[#d9dcd3] bg-white">
+    <>
+      <section className="mt-6 border border-[#d9dcd3] bg-white">
       <div className="border-b border-[#e0e2dc] px-5 py-4">
         <p className="text-xs font-bold uppercase tracking-[0.14em] text-primary">Parametros</p>
         <h2 className="mt-1 font-serif text-3xl font-semibold text-[#1d2d1a]">Configuracion comercial</h2>
@@ -400,7 +527,107 @@ export function AdminParameters({ onCategoriesChanged }: Readonly<AdminParameter
         </div>
       </div>
 
-      {isLoading ? <p className="px-5 pb-5 text-sm font-bold text-muted">Cargando parametros...</p> : null}
-    </section>
+      <div className="border-t border-[#e0e2dc] p-5">
+        <div className="border border-[#e0e2dc] p-4">
+          <h3 className="font-serif text-2xl text-[#1d2d1a]">Agente de IA</h3>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
+            Configura el prompt del sistema del Agente Matero. Elegi usar el prompt optimizado por defecto o uno personalizado guardado en la base.
+          </p>
+
+          <div className="mt-4 flex flex-wrap gap-2" role="radiogroup" aria-label="Origen del prompt">
+            <button
+              type="button"
+              role="radio"
+              aria-checked={aiPromptMode === "default"}
+              onClick={() => void saveAiPromptMode("default")}
+              disabled={isSavingAi || isLoadingAi}
+              className={`inline-flex h-10 items-center gap-2 border px-4 text-xs font-bold disabled:opacity-60 ${
+                aiPromptMode === "default"
+                  ? "border-[#20341d] bg-[#20341d] text-white"
+                  : "border-[#20341d] text-[#20341d]"
+              }`}
+            >
+              Prompt predeterminado
+            </button>
+            <button
+              type="button"
+              role="radio"
+              aria-checked={aiPromptMode === "custom"}
+              onClick={() => void saveAiPromptMode("custom")}
+              disabled={isSavingAi || isLoadingAi}
+              className={`inline-flex h-10 items-center gap-2 border px-4 text-xs font-bold disabled:opacity-60 ${
+                aiPromptMode === "custom"
+                  ? "border-[#20341d] bg-[#20341d] text-white"
+                  : "border-[#20341d] text-[#20341d]"
+              }`}
+            >
+              Prompt personalizado
+            </button>
+          </div>
+
+          <textarea
+            value={aiPrompt}
+            onChange={(event) => setAiPrompt(event.target.value)}
+            placeholder="Dejá vacío para usar el prompt predeterminado..."
+            disabled={isSavingAi || isLoadingAi || aiPromptMode === "default"}
+            className="admin-input mt-4 min-h-56 w-full resize-y py-3 font-mono text-xs leading-6 disabled:opacity-50"
+          />
+
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void saveAiPrompt()}
+              disabled={isSavingAi || isLoadingAi || aiPromptMode === "default"}
+              className="inline-flex h-10 items-center gap-2 bg-[#20341d] px-4 text-xs font-bold text-white disabled:opacity-60"
+            >
+              <Check size={16} /> {isSavingAi ? "Guardando..." : "Guardar prompt"}
+            </button>
+            <button
+              type="button"
+              onClick={() => void saveAiPrompt("")}
+              disabled={isSavingAi || isLoadingAi}
+              className="inline-flex h-10 items-center gap-2 border border-[#20341d] px-4 text-xs font-bold text-[#20341d] disabled:opacity-60"
+            >
+              Restablecer predeterminado
+            </button>
+            <button
+              type="button"
+              onClick={() => void loadAiPreview()}
+              disabled={isLoadingPreview}
+              className="inline-flex h-10 items-center gap-2 border border-[#20341d] px-4 text-xs font-bold text-[#20341d] disabled:opacity-60"
+            >
+              <Eye size={16} /> {isLoadingPreview ? "Cargando..." : "Ver prompt activo"}
+            </button>
+          </div>
+        </div>
+      </div>
+
+        {isLoading ? <p className="px-5 pb-5 text-sm font-bold text-muted">Cargando parametros...</p> : null}
+      </section>
+
+      {aiPreview ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" role="dialog" aria-modal="true" aria-label="Prompt activo">
+          <div className="flex max-h-[85vh] w-full max-w-3xl flex-col border border-[#e0e2dc] bg-[#faf9f5]">
+            <div className="flex items-center justify-between border-b border-[#e0e2dc] px-5 py-4">
+              <div>
+                <h3 className="font-serif text-xl text-[#1d2d1a]">Prompt activo</h3>
+                <p className="text-xs text-muted">Origen: {SOURCE_LABELS[aiPreview.source]}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setAiPreview(null)}
+                className="inline-flex h-9 w-9 items-center justify-center text-muted hover:text-[#1d2d1a]"
+                aria-label="Cerrar"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <pre className="overflow-auto whitespace-pre-wrap px-5 py-4 font-mono text-xs leading-6 text-[#1d2d1a]">
+              {aiPreview.prompt}
+            </pre>
+          </div>
+        </div>
+      ) : null}
+    </>
   );
 }

@@ -1,4 +1,6 @@
-export const SYSTEM_PROMPT = `
+import { site } from "@/data/site";
+
+export const DEFAULT_SYSTEM_PROMPT = `
 # AGENTE MATERO — MOTOR COMERCIAL INTELIGENTE v3.0
 
 # 1. IDENTIDAD
@@ -1486,3 +1488,55 @@ OPCIONES: [Ver más opciones] [Agregar al carrito] [¿Cuánto sale?]
 OPCIONES: [Sí, agregalo] [No, gracias]
 
 `;
+
+export type SystemPromptConfig = {
+  /** Prompt completo que reemplaza al predeterminado (por ejemplo desde una variable de entorno). */
+  prompt?: string;
+  /** Medios de pago confirmados de la tienda. Por defecto usa site.paymentMethods. */
+  paymentMethods?: string[];
+};
+
+/**
+ * Construye la nota de medios de pago y checkout a partir de los medios confirmados.
+ * Se mantiene separada para que el agente nunca invente formas de pago.
+ */
+export function buildPaymentNote(paymentMethods: string[] = site.paymentMethods): string {
+  const methods = (paymentMethods.length > 0 ? paymentMethods : site.paymentMethods)
+    .map((m) => `- ${m}`)
+    .join("\n");
+
+  return `
+
+# 51. MEDIOS DE PAGO Y CHECKOUT
+
+Los medios de pago confirmados de la tienda son:
+
+${methods}
+
+Reglas:
+
+- Respondé sobre medios de pago únicamente con la lista confirmada de arriba. Nunca inventes cuotas, promociones bancarias, descuentos ni condiciones.
+- El pago online se completa a través de Mercado Pago de forma segura. Para comprar, el cliente completa sus datos, elige el envío y presiona "Pagar con Mercado Pago".
+- Nunca pidas en el chat datos de tarjeta, DNI, CVV ni información sensible. El pago se realiza únicamente en el checkout.
+- Si el cliente pregunta por cuotas o promociones de Mercado Pago, respondé: "Las cuotas y promociones disponibles las vas a ver al momento de pagar en Mercado Pago."
+- Si el cliente pregunta cómo pagar, explicale el flujo de checkout de forma breve y guialo a finalizar la compra. No continúes vendiendo productos en ese punto.
+`;
+}
+
+/**
+ * Devuelve el prompt del sistema listo para usar.
+ *
+ * Configurable por parámetro (objeto de configuración) o por variable de entorno:
+ * - Si se define AI_SYSTEM_PROMPT, reemplaza por completo el prompt predeterminado.
+ * - El parámetro `prompt` tiene prioridad sobre la variable de entorno.
+ * - Los medios de pago se inyectan al final y usan site.paymentMethods por defecto.
+ */
+export function buildSystemPrompt(config: SystemPromptConfig = {}): string {
+  const basePrompt =
+    config.prompt ??
+    process.env.AI_SYSTEM_PROMPT ??
+    DEFAULT_SYSTEM_PROMPT;
+
+  return basePrompt + buildPaymentNote(config.paymentMethods ?? site.paymentMethods);
+}
+

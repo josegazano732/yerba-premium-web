@@ -16,6 +16,7 @@ declare module "lucide-react" {
   export const CreditCard: LucideIcon;
   export const CupSoda: LucideIcon;
   export const ExternalLink: LucideIcon;
+  export const Eye: LucideIcon;
   export const FileDown: LucideIcon;
   export const Filter: LucideIcon;
   export const FlaskConical: LucideIcon;

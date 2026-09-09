@@ -9,6 +9,7 @@ import { useCart } from "@/lib/cart-context";
 import { site } from "@/data/site";
 import type { AiMessage, AiChatResponse, CartAction } from "@/lib/ai/types";
 import { AiProductCard } from "./AiProductCard";
+import { MateroBot } from "./MateroBot";
 
 const currency = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 
@@ -197,7 +198,7 @@ export function AiMatera() {
           aria-label="Abrir Agente Matero"
           className="relative flex h-14 w-14 items-center justify-center rounded-full bg-[#20341d] p-0 text-white shadow-[0_8px_32px_rgba(32,52,29,0.45)] ring-1 ring-white/10 transition-all hover:scale-105 hover:shadow-[0_12px_40px_rgba(32,52,29,0.55)] focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 active:scale-95 sm:h-auto sm:w-auto sm:gap-2 sm:py-3 sm:pl-3.5 sm:pr-4"
         >
-          <span className="text-xl leading-none" aria-hidden>🧉</span>
+          <MateroBot className="h-10 w-10" />
           <span className="hidden text-[13px] font-bold tracking-wide sm:inline">Agente Matero</span>
           <span className="hidden h-2.5 w-2.5 sm:relative sm:flex" aria-hidden>
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#4ade80] opacity-75" />
@@ -240,8 +241,8 @@ export function AiMatera() {
               {/* Header */}
               <div className="flex shrink-0 items-center justify-between gap-3 bg-gradient-to-r from-[#182b16] to-[#20341d] px-4 py-3.5 sm:px-6">
                 <div className="flex items-center gap-3">
-                  <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-xl leading-none ring-2 ring-white/20">
-                    🧉
+                  <div className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 ring-2 ring-white/20">
+                    <MateroBot className="h-9 w-9" />
                     <span className="absolute -bottom-0.5 -right-0.5 flex h-3.5 w-3.5">
                       <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#4ade80] opacity-60" />
                       <span className="relative h-3.5 w-3.5 rounded-full border-2 border-[#20341d] bg-[#4ade80]" />
@@ -318,7 +319,7 @@ export function AiMatera() {
                           {/* Assistant */}
                           {msg.role === "assistant" && !msg.isLoading ? (
                             <div className="flex w-full items-start gap-2 sm:max-w-[82%]">
-                              <span className="mt-1 hidden shrink-0 text-lg leading-none sm:block" aria-hidden>🧉</span>
+                              <MateroBot className="mt-1 hidden h-8 w-8 shrink-0 sm:block" />
                               <div className="min-w-0 flex-1 overflow-hidden">
                                 <div className="break-words max-w-[52ch] rounded-2xl rounded-bl-sm bg-white px-3 py-2.5 text-sm leading-relaxed text-text shadow-sm ring-1 ring-black/[0.04] sm:max-w-[56ch] sm:px-4 sm:py-3">
                                   {renderContent(msg.content)}
@@ -360,7 +361,7 @@ export function AiMatera() {
                             </div>
                           ) : msg.isLoading ? (
                             <div className="flex items-end gap-2">
-                              <span className="mb-1 shrink-0 text-lg leading-none" aria-hidden>🧉</span>
+                              <MateroBot className="mb-1 h-8 w-8 shrink-0" />
                               <div className="flex items-center gap-1.5 rounded-2xl rounded-bl-sm bg-white px-4 py-3.5 shadow-sm">
                                 {[0, 1, 2].map((i) => (
                                   <span

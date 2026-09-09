@@ -69,7 +69,13 @@ export function Footer() {
         <div
           className="relative"
         >
-          <div className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2 bg-background px-6">
+          <div
+            className="absolute left-1/2 top-0 z-10 -translate-x-1/2 -translate-y-1/2 bg-transparent px-6"
+            style={{
+              backgroundImage:
+                "linear-gradient(to bottom, transparent calc(50% - 1px), var(--background) calc(50% - 1px), var(--background) calc(50% + 1px), transparent calc(50% + 1px))"
+            }}
+          >
             <Link href="/" aria-label="Inicio" className="block">
               <BrandLogo />
             </Link>

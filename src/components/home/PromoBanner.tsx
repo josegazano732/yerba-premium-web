@@ -79,7 +79,7 @@ export function PromoBanner() {
             />
             <div
               aria-hidden="true"
-              className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent md:bg-gradient-to-r md:from-transparent md:via-transparent md:to-black/10"
+              className="absolute inset-0 bg-[linear-gradient(to_top,rgba(24,32,20,0.28),rgba(24,32,20,0.06)_45%,transparent_72%)] md:bg-[linear-gradient(to_right,transparent,transparent_52%,rgba(24,32,20,0.16))]"
             />
           </div>
 

@@ -25,6 +25,7 @@ Web ecommerce-ready para una marca DTC premium de yerba mate, construida con **N
 ```bash
 npm run dev       # servidor de desarrollo (Next.js completo, incluye API routes)
 npm run build     # build de producción
+npm run test      # tests determinísticos del agente comercial
 npm run start     # sirve la carpeta estática `out` (solo export estático)
 npm run preview   # igual que start
 npm run lint      # ESLint
@@ -87,6 +88,11 @@ src/
 │   └── utils.ts              # Utilidades (cn, etc.)
 └── types/                    # Declaraciones de tipos (lucide-react.d.ts)
 ```
+
+El Agente Matero mantiene un contexto comercial estructurado entre turnos
+(estado, intención, taxonomía, referencias de productos y carrito). Las tools
+validan la clasificación contra Supabase y vuelven a comprobar precio y stock
+antes de modificar el carrito.
 
 ### Alias de importación
 

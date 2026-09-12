@@ -5,12 +5,16 @@ export const AI_TOOLS: ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "search_products",
-      description: "Busca productos reales de la tienda. Usá esto cuando el cliente mencione preferencias o quiera ver opciones.",
+      description: "Busca y rankea productos reales. Priorizá categoría y subcategoría sobre el texto libre.",
       parameters: {
         type: "object",
         properties: {
           query: { type: "string", description: "Texto libre para buscar en nombre y descripción del producto" },
-          category: { type: "string", description: "Categoría exacta (ej: Yerba mate, Mates, Termos, Bombillas, Materas)" },
+          category_id: { type: "string", description: "ID exacto de una categoría validada" },
+          category: { type: "string", description: "Nombre exacto de la categoría real" },
+          subcategory_id: { type: "string", description: "ID exacto de una subcategoría validada" },
+          subcategory: { type: "string", description: "Nombre exacto de la subcategoría real" },
+          product_id: { type: "string", description: "ID de producto cuando ya se conoce" },
           maxPrice: { type: "number", description: "Precio máximo en ARS" },
           minPrice: { type: "number", description: "Precio mínimo en ARS" },
           limit: { type: "number", description: "Cantidad de resultados. Default 5, máximo 8." }
@@ -51,7 +55,7 @@ export const AI_TOOLS: ChatCompletionTool[] = [
     type: "function",
     function: {
       name: "add_to_cart",
-      description: "Agrega un producto al carrito. Solo usá IDs reales obtenidos de search_products o get_product.",
+      description: "Valida nuevamente producto, precio, cantidad y stock, y luego agrega al carrito.",
       parameters: {
         type: "object",
         properties: {

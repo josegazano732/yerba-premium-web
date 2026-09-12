@@ -1,5 +1,6 @@
 import { Product } from "@/data/products";
 import { CartItem } from "@/lib/cart";
+import type { CommerceContext } from "@/lib/ai/commerce-context";
 
 export type AiMessage = {
   id: string;
@@ -20,6 +21,7 @@ export type AiChatRequest = {
   history: Array<{ role: "user" | "assistant"; content: string }>;
   cart: CartItem[];
   currentProductId?: string;
+  commerceContext?: CommerceContext;
 };
 
 export type AiChatResponse = {
@@ -27,5 +29,6 @@ export type AiChatResponse = {
   products?: Product[];
   quickReplies?: string[];
   cartActions?: CartAction[];
+  commerceContext?: CommerceContext;
   error?: string;
 };

@@ -8,6 +8,9 @@ export type Product = {
   images?: string[];
   description: string;
   category: string;
+  categoryId?: string;
+  subcategory?: string;
+  subcategoryId?: string;
   weight?: string;
   stock: number;
   featured?: boolean;

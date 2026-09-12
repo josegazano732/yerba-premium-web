@@ -8,6 +8,7 @@ import { Product } from "@/data/products";
 import { useCart } from "@/lib/cart-context";
 import { site } from "@/data/site";
 import type { AiMessage, AiChatResponse, CartAction } from "@/lib/ai/types";
+import type { CommerceContext } from "@/lib/ai/commerce-context";
 import { AiProductCard } from "./AiProductCard";
 import { MateroBot } from "./MateroBot";
 
@@ -30,6 +31,7 @@ export function AiMatera() {
   const [messages, setMessages] = useState<AiMessage[]>([WELCOME]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [commerceContext, setCommerceContext] = useState<CommerceContext>();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -66,7 +68,7 @@ export function AiMatera() {
     }
   }
 
-  async function sendMessage(text: string) {
+  async function sendMessage(text: string, selectedProductId?: string) {
     const trimmed = text.trim();
     if (!trimmed || isLoading) return;
 
@@ -86,12 +88,19 @@ export function AiMatera() {
       const res = await fetch("/api/ai/chat", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: trimmed, history, cart })
+        body: JSON.stringify({
+          message: trimmed,
+          history,
+          cart,
+          currentProductId: selectedProductId ?? commerceContext?.currentProductId,
+          commerceContext,
+        })
       });
 
       const data = (await res.json()) as AiChatResponse;
 
       if (data.cartActions?.length) applyCartActions(data.cartActions);
+      if (data.commerceContext) setCommerceContext(data.commerceContext);
 
       const assistantMsg: AiMessage = {
         id: uid(),
@@ -146,7 +155,7 @@ export function AiMatera() {
   }
 
   function handleAddFromAI(product: Product) {
-    void sendMessage(`Agregá uno de ${product.name} al pedido`);
+    void sendMessage(`Agregá uno de ${product.name} al pedido`, product.id);
   }
 
   // Convierte URLs en <a> clickeables y \n en saltos de línea reales

@@ -1,9 +1,10 @@
 import { createClient } from "@supabase/supabase-js";
 import type { MetadataRoute } from "next";
+import { storeConfig } from "@/config/store";
 import { site } from "@/data/site";
 import { slugify, categoryUrl } from "@/lib/seo";
 
-const staticRoutes: MetadataRoute.Sitemap = [
+const staticRoutesBase: MetadataRoute.Sitemap = [
   { url: site.baseUrl, changeFrequency: "weekly", priority: 1.0, lastModified: new Date() },
   { url: `${site.baseUrl}/productos`, changeFrequency: "daily", priority: 0.9, lastModified: new Date() },
   { url: `${site.baseUrl}/sobre-nosotros`, changeFrequency: "monthly", priority: 0.6, lastModified: new Date() },
@@ -12,6 +13,13 @@ const staticRoutes: MetadataRoute.Sitemap = [
 ];
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+  const staticRoutes = storeConfig.features.kitBuilder3D
+    ? [
+        ...staticRoutesBase,
+        { url: `${site.baseUrl}/kit-builder`, changeFrequency: "weekly" as const, priority: 0.65, lastModified: new Date() }
+      ]
+    : staticRoutesBase;
+
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
   if (!url || !key) return staticRoutes;

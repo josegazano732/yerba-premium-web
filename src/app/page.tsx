@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { HeroBanner } from "@/components/home/HeroBanner";
 import { CategoryQuickLinks } from "@/components/home/CategoryQuickLinks";
+import { KitBuilderBanner } from "@/components/home/KitBuilderBanner";
 import { CombosSection } from "@/components/home/CombosSection";
 import { InstagramHighlights } from "@/components/home/InstagramHighlights";
 import { ProductMarquee } from "@/components/home/ProductMarquee";
@@ -23,6 +24,7 @@ export default function Home() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(buildOrganizationSchema()) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(buildWebSiteSchema()) }} />
       <HeroBanner />
+      <KitBuilderBanner />
       <CategoryQuickLinks />
       <CombosSection />
       <FeaturedProducts />

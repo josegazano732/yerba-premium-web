@@ -3,8 +3,11 @@
 import { Instagram, Mail, Music2 } from "lucide-react";
 import Link from "next/link";
 import { useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
+import { ENV_DEFAULT_STORE_CONFIG } from "@/config/store";
 import { site } from "@/data/site";
 import { categoryUrl } from "@/lib/seo";
+import { resolveKitBuilder3DEnabledClient } from "@/lib/store-features-client";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Container } from "@/components/ui/Container";
 
@@ -24,35 +27,46 @@ const socials = [
   { Icon: Mail, href: whatsappUrl, label: "Contacto", external: true }
 ];
 
-const columns = [
-  {
-    title: "Comprar",
-    links: [
-      { label: "Todos los productos", href: "/productos", external: false },
-      { label: "Mates", href: categoryUrl("Mates"), external: false },
-      { label: "Termos", href: categoryUrl("Termos"), external: false },
-      { label: "Bombillas", href: categoryUrl("Bombillas"), external: false }
-    ]
-  },
-  {
-    title: "Conocenos",
-    links: [
-      { label: "Sobre Nosotros", href: "/sobre-nosotros", external: false },
-      { label: "Donde Comprar", href: "/donde-comprar", external: false },
-      { label: "Mayoristas", href: whatsappUrl, external: true }
-    ]
-  },
-  {
-    title: "Ayuda",
-    links: [
-      { label: "Contacto", href: whatsappUrl, external: true },
-      { label: "Envios y cambios", href: whatsappUrl, external: true }
-    ]
-  }
-];
-
 export function Footer() {
   const { register, handleSubmit, reset } = useForm<NewsletterForm>();
+  const [enabledKitBuilder, setEnabledKitBuilder] = useState(ENV_DEFAULT_STORE_CONFIG.features.kitBuilder3D);
+
+  useEffect(() => {
+    resolveKitBuilder3DEnabledClient()
+      .then((enabled) => setEnabledKitBuilder(enabled))
+      .catch(() => undefined);
+  }, []);
+
+  const columns = [
+    {
+      title: "Comprar",
+      links: [
+        { label: "Todos los productos", href: "/productos", external: false },
+        { label: "Mates", href: categoryUrl("Mates"), external: false },
+        { label: "Termos", href: categoryUrl("Termos"), external: false },
+        { label: "Bombillas", href: categoryUrl("Bombillas"), external: false }
+      ]
+    },
+    {
+      title: "Conocenos",
+      links: [
+        { label: "Sobre Nosotros", href: "/sobre-nosotros", external: false },
+        { label: "Donde Comprar", href: "/donde-comprar", external: false },
+        { label: "Mayoristas", href: whatsappUrl, external: true }
+      ]
+    },
+    {
+      title: "Ayuda",
+      links: [
+        { label: "Contacto", href: whatsappUrl, external: true },
+        { label: "Envios y cambios", href: whatsappUrl, external: true }
+      ]
+    }
+  ];
+
+  if (enabledKitBuilder) {
+    columns[0].links.push({ label: "Arma tu Kit", href: "/kit-builder", external: false });
+  }
 
   function onSubmit() {
     reset();

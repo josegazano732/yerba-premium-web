@@ -5,15 +5,28 @@ import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { site } from "@/data/site";
 
-const navItems = [
-  { href: "/productos", label: "Productos", external: false },
-  { href: "/catalogos", label: "Catalogos", external: false },
-  { href: "/donde-comprar", label: "Donde Comprar", external: false },
-  { href: "/sobre-nosotros", label: "Sobre Nosotros", external: false },
-  { href: `https://wa.me/${site.whatsappNumber}`, label: "Contacto", external: true }
-];
+function buildNavItems(enabledKitBuilder: boolean) {
+  const items = [
+    { href: "/productos", label: "Productos", external: false },
+    { href: "/catalogos", label: "Catalogos", external: false },
+    { href: "/donde-comprar", label: "Donde Comprar", external: false },
+    { href: "/sobre-nosotros", label: "Sobre Nosotros", external: false },
+  ];
 
-export function MobileMenu({ onNavigate }: Readonly<{ onNavigate: () => void }>) {
+  if (enabledKitBuilder) {
+    items.push({ href: "/kit-builder", label: "Arma tu Kit", external: false });
+  }
+
+  items.push({ href: `https://wa.me/${site.whatsappNumber}`, label: "Contacto", external: true });
+  return items;
+}
+
+export function MobileMenu({
+  onNavigate,
+  enabledKitBuilder,
+}: Readonly<{ onNavigate: () => void; enabledKitBuilder: boolean }>) {
+  const navItems = buildNavItems(enabledKitBuilder);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: -8 }}

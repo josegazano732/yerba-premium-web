@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { Check, Eye, Plus, X } from "lucide-react";
+import { ENV_DEFAULT_STORE_CONFIG, STORE_FEATURE_KEYS, parseBooleanFlag } from "@/config/store";
 import { supabase } from "@/lib/supabase";
 import { DEFAULT_MARGIN_PROFILES, normalizeMarginPercentage, slugifyCatalog, type WholesaleMarginProfile } from "@/lib/wholesale";
 
@@ -52,6 +53,8 @@ export function AdminParameters({ onCategoriesChanged }: Readonly<AdminParameter
   const [isSavingCategory, setIsSavingCategory] = useState(false);
   const [isSavingSubcategory, setIsSavingSubcategory] = useState(false);
   const [isSavingMargins, setIsSavingMargins] = useState(false);
+  const [kitBuilder3DEnabled, setKitBuilder3DEnabled] = useState(ENV_DEFAULT_STORE_CONFIG.features.kitBuilder3D);
+  const [isSavingKitBuilderSetting, setIsSavingKitBuilderSetting] = useState(false);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiPromptMode, setAiPromptMode] = useState<"custom" | "default">("default");
   const [isLoadingAi, setIsLoadingAi] = useState(false);
@@ -74,7 +77,7 @@ export function AdminParameters({ onCategoriesChanged }: Readonly<AdminParameter
     setIsLoading(true);
     setMessage("");
 
-    const [categoriesResult, subcategoriesResult, marginsResult] = await Promise.all([
+    const [categoriesResult, subcategoriesResult, marginsResult, kitBuilderSettingResult] = await Promise.all([
       supabase
         .from("product_categories")
         .select("id,name,slug,is_active,display_order")
@@ -89,7 +92,12 @@ export function AdminParameters({ onCategoriesChanged }: Readonly<AdminParameter
       supabase
         .from("wholesale_margin_profiles")
         .select("id,use_key,use_label,suggested_margin_percentage,is_active,display_order")
-        .order("display_order", { ascending: true })
+        .order("display_order", { ascending: true }),
+      supabase
+        .from("site_settings")
+        .select("value")
+        .eq("key", STORE_FEATURE_KEYS.kitBuilder3D)
+        .maybeSingle()
     ]);
 
     setIsLoading(false);
@@ -127,6 +135,43 @@ export function AdminParameters({ onCategoriesChanged }: Readonly<AdminParameter
       })) ?? [];
 
     setMarginProfiles(mappedMargins.length > 0 ? mappedMargins : DEFAULT_MARGIN_PROFILES);
+    if (!kitBuilderSettingResult.error) {
+      setKitBuilder3DEnabled(
+        parseBooleanFlag(
+          typeof kitBuilderSettingResult.data?.value === "string" ? kitBuilderSettingResult.data.value : null,
+          ENV_DEFAULT_STORE_CONFIG.features.kitBuilder3D
+        )
+      );
+    }
+  }
+
+  async function toggleKitBuilder3D() {
+    if (!supabase) return;
+    setIsSavingKitBuilderSetting(true);
+    setMessage("");
+    setIsError(false);
+
+    const nextValue = !kitBuilder3DEnabled;
+    const { error } = await supabase
+      .from("site_settings")
+      .upsert(
+        { key: STORE_FEATURE_KEYS.kitBuilder3D, value: String(nextValue) },
+        { onConflict: "key" }
+      );
+
+    setIsSavingKitBuilderSetting(false);
+
+    if (error) {
+      setIsError(true);
+      setMessage(`No se pudo actualizar Armá tu Kit: ${error.message}`);
+      return;
+    }
+
+    setKitBuilder3DEnabled(nextValue);
+    setMessage(nextValue ? "Armá tu Kit habilitado." : "Armá tu Kit deshabilitado.");
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("store-features-updated"));
+    }
   }
 
   async function loadAiPrompt() {
@@ -524,6 +569,38 @@ export function AdminParameters({ onCategoriesChanged }: Readonly<AdminParameter
           >
             <Check size={16} /> {isSavingMargins ? "Guardando..." : "Guardar parametros"}
           </button>
+        </div>
+      </div>
+
+      <div className="border-t border-[#e0e2dc] p-5">
+        <div className="border border-[#e0e2dc] p-4">
+          <h3 className="font-serif text-2xl text-[#1d2d1a]">Feature flags de tienda</h3>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-muted">
+            Controla módulos opcionales sin tocar código ni variables de entorno.
+          </p>
+
+          <div className="mt-4 flex flex-wrap items-center justify-between gap-3 border border-[#e0e2dc] bg-[#faf9f5] p-4">
+            <div>
+              <p className="text-sm font-bold text-[#1d2d1a]">Armá tu Kit 3D</p>
+              <p className="text-xs text-muted">
+                Estado actual: {kitBuilder3DEnabled ? "Habilitado" : "Deshabilitado"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => void toggleKitBuilder3D()}
+              disabled={isSavingKitBuilderSetting}
+              className={`inline-flex h-10 items-center gap-2 px-4 text-xs font-bold text-white disabled:opacity-60 ${
+                kitBuilder3DEnabled ? "bg-[#8b2d2d] hover:bg-[#7a2222]" : "bg-[#20341d] hover:bg-[#2a4724]"
+              }`}
+            >
+              {isSavingKitBuilderSetting
+                ? "Guardando..."
+                : kitBuilder3DEnabled
+                  ? "Deshabilitar Armá tu Kit"
+                  : "Habilitar Armá tu Kit"}
+            </button>
+          </div>
         </div>
       </div>
 

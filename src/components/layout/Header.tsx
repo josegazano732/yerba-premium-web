@@ -9,6 +9,8 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
 import { Container } from "@/components/ui/Container";
 import { useCatalog } from "@/lib/useCatalog";
 import { categoryUrl } from "@/lib/seo";
+import { ENV_DEFAULT_STORE_CONFIG } from "@/config/store";
+import { resolveKitBuilder3DEnabledClient } from "@/lib/store-features-client";
 import { site } from "@/data/site";
 import { formatPrice } from "@/lib/utils";
 import { FREE_SHIPPING_THRESHOLD } from "@/lib/shipping";
@@ -67,8 +69,12 @@ export function Header() {
   const [isOpen, setIsOpen] = useState(false);
   const [isProductsOpen, setIsProductsOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [enabledKitBuilder, setEnabledKitBuilder] = useState(ENV_DEFAULT_STORE_CONFIG.features.kitBuilder3D);
   const productsMenuRef = useRef<HTMLDivElement | null>(null);
   const { products, categories } = useCatalog();
+  const navLinks = enabledKitBuilder
+    ? [...navItems, { href: "/kit-builder", label: "Arma tu Kit", external: false }]
+    : navItems;
 
   const rankedCategories = useMemo(() => {
     const counts = products.reduce<Record<string, number>>((accumulator, product) => {
@@ -113,6 +119,29 @@ export function Header() {
       href: categoryUrl(category.name)
     }));
   }, [rankedCategories]);
+
+  useEffect(() => {
+    function syncKitBuilderVisibility() {
+      resolveKitBuilder3DEnabledClient()
+        .then((enabled) => setEnabledKitBuilder(enabled))
+        .catch(() => undefined);
+    }
+
+    function onVisibilityChange() {
+      if (document.visibilityState === "visible") syncKitBuilderVisibility();
+    }
+
+    syncKitBuilderVisibility();
+    window.addEventListener("store-features-updated", syncKitBuilderVisibility as EventListener);
+    window.addEventListener("focus", syncKitBuilderVisibility);
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      window.removeEventListener("store-features-updated", syncKitBuilderVisibility as EventListener);
+      window.removeEventListener("focus", syncKitBuilderVisibility);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+    };
+  }, []);
 
   useEffect(() => {
     function handlePointerDown(event: PointerEvent) {
@@ -296,7 +325,7 @@ export function Header() {
               </AnimatePresence>
             </div>
 
-            {navItems.map((item) => (
+            {navLinks.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
@@ -341,7 +370,11 @@ export function Header() {
           </Link>
         </div>
 
-        <AnimatePresence>{isOpen ? <MobileMenu onNavigate={() => setIsOpen(false)} /> : null}</AnimatePresence>
+        <AnimatePresence>
+          {isOpen ? (
+            <MobileMenu onNavigate={() => setIsOpen(false)} enabledKitBuilder={enabledKitBuilder} />
+          ) : null}
+        </AnimatePresence>
       </Container>
     </header>
   );

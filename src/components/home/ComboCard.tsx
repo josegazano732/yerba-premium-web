@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Check, PackageCheck, ShoppingBag } from "lucide-react";
+import { Check, PackageCheck, ShoppingBag, Sparkles } from "lucide-react";
 import Image from "next/image";
 import { useState } from "react";
 import { Combo } from "@/lib/combos";
@@ -30,9 +30,9 @@ export function ComboCard({ combo }: Readonly<ComboCardProps>) {
     <motion.article
       whileHover={{ y: -6 }}
       transition={{ duration: 0.25 }}
-      className="group relative flex h-full flex-col overflow-hidden rounded-[10px] border border-[#d3d9c9] bg-[#fffdf8] p-2 shadow-[0_12px_35px_rgba(32,52,29,0.08)] transition hover:border-primary/45 hover:shadow-[0_22px_50px_rgba(32,52,29,0.14)]"
+      className="group relative flex h-full flex-col overflow-hidden rounded-[12px] border border-[#e7e2d8] bg-[#fffdf8] p-2 shadow-[0_14px_38px_rgba(0,0,0,0.16)] transition hover:border-[#b8cf84] hover:shadow-[0_24px_54px_rgba(0,0,0,0.24)]"
     >
-      <div className="relative aspect-[4/3.15] overflow-hidden rounded-[7px] bg-[#dfe5d3]">
+      <div className="relative aspect-[4/3.05] overflow-hidden rounded-[9px] bg-[#dfe5d3]">
         {combo.image ? (
           <Image
             src={combo.image}
@@ -48,7 +48,8 @@ export function ComboCard({ combo }: Readonly<ComboCardProps>) {
         )}
 
         <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-[#20341d]/45 to-transparent" />
-        <span className="absolute left-3 top-3 rounded-full bg-[#20341d] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.13em] text-white shadow-sm">
+        <span className="absolute left-3 top-3 inline-flex items-center gap-1.5 rounded-full bg-[#20341d] px-3 py-1.5 text-[10px] font-extrabold uppercase tracking-[0.13em] text-white shadow-sm">
+          <Sparkles className="h-3 w-3 text-[#d7e68c]" aria-hidden />
           Combo especial
         </span>
 
@@ -71,20 +72,23 @@ export function ComboCard({ combo }: Readonly<ComboCardProps>) {
           <p className="mt-2.5 line-clamp-2 text-sm leading-relaxed text-muted">{combo.description}</p>
         ) : null}
 
-        <div className="mt-4 rounded-[6px] border border-[#e6e2d7] bg-[#f8f6ef] px-3 py-2.5">
-          <p className="mb-2 text-[10px] font-extrabold uppercase tracking-[0.13em] text-[#5f6657]">Incluye</p>
+        <div className="mt-4 rounded-[8px] border border-[#e6e2d7] bg-[#f8f6ef] px-3 py-3">
+          <div className="mb-2 flex items-center justify-between gap-3">
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.13em] text-[#5f6657]">Incluye</p>
+            <span className="text-[10px] font-bold text-primary">{combo.items.length} {combo.items.length === 1 ? "producto" : "productos"}</span>
+          </div>
           <ul className="space-y-1.5">
-          {visibleItems.map((item) => (
-            <li key={item.productId} className="flex items-center gap-2 text-[13px] text-[#3b2a1d]">
-              <Check className="h-3.5 w-3.5 shrink-0 text-primary" strokeWidth={3} />
-              <span className="min-w-0 line-clamp-1">
-                <strong className="font-extrabold">{item.quantity} ×</strong> {item.name}
-              </span>
-            </li>
-          ))}
-          {remainingItems > 0 ? (
-            <li className="pl-5 text-xs font-semibold text-primary">+ {remainingItems} productos más</li>
-          ) : null}
+            {visibleItems.map((item) => (
+              <li key={item.productId} className="flex items-center gap-2 text-[13px] text-[#3b2a1d]">
+                <Check className="h-3.5 w-3.5 shrink-0 text-primary" strokeWidth={3} />
+                <span className="min-w-0 line-clamp-1">
+                  <strong className="font-extrabold">{item.quantity} ×</strong> {item.name}
+                </span>
+              </li>
+            ))}
+            {remainingItems > 0 ? (
+              <li className="pl-5 text-xs font-semibold text-primary">+ {remainingItems} productos más</li>
+            ) : null}
           </ul>
         </div>
 
@@ -116,6 +120,9 @@ export function ComboCard({ combo }: Readonly<ComboCardProps>) {
             {!combo.available ? "Sin stock" : added ? "¡Agregado!" : "Agregar combo al carrito"}
           </button>
         </div>
+        <p aria-live="polite" className="sr-only">
+          {added ? `${combo.name} fue agregado al carrito.` : ""}
+        </p>
 
         {!combo.available ? (
           <p className="mt-2 text-center text-xs font-medium text-red-700">

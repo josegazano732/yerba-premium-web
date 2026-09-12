@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useState } from "react";
 import { Product } from "@/data/products";
+import { Combo } from "@/lib/combos";
 import { CartItem, CART_STORAGE_KEY } from "@/lib/cart";
 
 type CartContextValue = {
@@ -9,6 +10,9 @@ type CartContextValue = {
   addToCart: (product: Product, quantity?: number) => void;
   changeQuantity: (productId: string, delta: number) => void;
   removeFromCart: (productId: string) => void;
+  addCombo: (combo: Combo, quantity?: number) => void;
+  changeComboQuantity: (comboId: string, delta: number) => void;
+  removeCombo: (comboId: string) => void;
   clearCart: () => void;
 };
 
@@ -19,16 +23,32 @@ function isCartItemArray(value: unknown): value is CartItem[] {
 
   return value.every((item) => {
     if (!item || typeof item !== "object") return false;
-    const candidate = item as { quantity?: unknown; product?: unknown };
+    const candidate = item as { kind?: unknown; quantity?: unknown; product?: unknown; combo?: unknown };
     if (typeof candidate.quantity !== "number" || !Number.isFinite(candidate.quantity) || candidate.quantity <= 0) return false;
-    if (!candidate.product || typeof candidate.product !== "object") return false;
-    const product = candidate.product as { id?: unknown; name?: unknown; price?: unknown; image?: unknown; category?: unknown };
-    return typeof product.id === "string"
-      && typeof product.name === "string"
-      && typeof product.price === "number"
-      && Number.isFinite(product.price)
-      && typeof product.image === "string"
-      && typeof product.category === "string";
+
+    if (candidate.kind === "product") {
+      if (!candidate.product || typeof candidate.product !== "object") return false;
+      const product = candidate.product as { id?: unknown; name?: unknown; price?: unknown; image?: unknown; category?: unknown };
+      return typeof product.id === "string"
+        && typeof product.name === "string"
+        && typeof product.price === "number"
+        && Number.isFinite(product.price)
+        && typeof product.image === "string"
+        && typeof product.category === "string";
+    }
+
+    if (candidate.kind === "combo") {
+      if (!candidate.combo || typeof candidate.combo !== "object") return false;
+      const combo = candidate.combo as { id?: unknown; name?: unknown; price?: unknown; image?: unknown; items?: unknown };
+      return typeof combo.id === "string"
+        && typeof combo.name === "string"
+        && typeof combo.price === "number"
+        && Number.isFinite(combo.price)
+        && typeof combo.image === "string"
+        && Array.isArray(combo.items);
+    }
+
+    return false;
   });
 }
 
@@ -65,15 +85,17 @@ export function CartProvider({ children }: Readonly<{ children: React.ReactNode 
 
   function addToCart(product: Product, quantity = 1) {
     setCart((current) => {
-      const existing = current.find((item) => item.product.id === product.id);
+      const existing = current.find(
+        (item) => item.kind === "product" && item.product.id === product.id
+      );
       if (existing) {
         return current.map((item) =>
-          item.product.id === product.id
+          item.kind === "product" && item.product.id === product.id
             ? { ...item, quantity: item.quantity + quantity }
             : item
         );
       }
-      return [...current, { product, quantity }];
+      return [...current, { kind: "product" as const, product, quantity }];
     });
   }
 
@@ -81,7 +103,7 @@ export function CartProvider({ children }: Readonly<{ children: React.ReactNode 
     setCart((current) =>
       current
         .map((item) =>
-          item.product.id === productId
+          item.kind === "product" && item.product.id === productId
             ? { ...item, quantity: item.quantity + delta }
             : item
         )
@@ -90,7 +112,43 @@ export function CartProvider({ children }: Readonly<{ children: React.ReactNode 
   }
 
   function removeFromCart(productId: string) {
-    setCart((current) => current.filter((item) => item.product.id !== productId));
+    setCart((current) =>
+      current.filter((item) => !(item.kind === "product" && item.product.id === productId))
+    );
+  }
+
+  function addCombo(combo: Combo, quantity = 1) {
+    setCart((current) => {
+      const existing = current.find(
+        (item) => item.kind === "combo" && item.combo.id === combo.id
+      );
+      if (existing) {
+        return current.map((item) =>
+          item.kind === "combo" && item.combo.id === combo.id
+            ? { ...item, quantity: item.quantity + quantity }
+            : item
+        );
+      }
+      return [...current, { kind: "combo" as const, combo, quantity }];
+    });
+  }
+
+  function changeComboQuantity(comboId: string, delta: number) {
+    setCart((current) =>
+      current
+        .map((item) =>
+          item.kind === "combo" && item.combo.id === comboId
+            ? { ...item, quantity: item.quantity + delta }
+            : item
+        )
+        .filter((item) => item.quantity > 0)
+    );
+  }
+
+  function removeCombo(comboId: string) {
+    setCart((current) =>
+      current.filter((item) => !(item.kind === "combo" && item.combo.id === comboId))
+    );
   }
 
   function clearCart() {
@@ -98,7 +156,18 @@ export function CartProvider({ children }: Readonly<{ children: React.ReactNode 
   }
 
   return (
-    <CartContext.Provider value={{ cart, addToCart, changeQuantity, removeFromCart, clearCart }}>
+    <CartContext.Provider
+      value={{
+        cart,
+        addToCart,
+        changeQuantity,
+        removeFromCart,
+        addCombo,
+        changeComboQuantity,
+        removeCombo,
+        clearCart,
+      }}
+    >
       {children}
     </CartContext.Provider>
   );

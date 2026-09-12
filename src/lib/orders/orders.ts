@@ -10,8 +10,25 @@ export type OrderLineItem = {
   subtotal: number;
 };
 
+export type OrderComboComponent = {
+  productId: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+};
+
+export type OrderComboLine = {
+  comboId: string;
+  name: string;
+  unitPrice: number;
+  quantity: number;
+  subtotal: number;
+  components: OrderComboComponent[];
+};
+
 export type CalculatedOrder = {
   items: OrderLineItem[];
+  combos?: OrderComboLine[];
   subtotal: number;
   shippingCost: number;
   shippingLabel: string;
@@ -50,6 +67,21 @@ type ProductRow = {
   stock: number | string | null;
 };
 
+type ComboRow = {
+  id: string;
+  name: string;
+  price: number | string | null;
+  active: boolean;
+  starts_at: string | null;
+  ends_at: string | null;
+};
+
+type ComboItemRow = {
+  combo_id: string;
+  product_id: string;
+  quantity: number;
+};
+
 const PRODUCT_COLUMNS = "id, name, price, stock";
 
 function assertServerClient() {
@@ -81,6 +113,44 @@ async function fetchProductsByIds(productIds: string[]): Promise<Map<string, Pro
   return map;
 }
 
+/** Lee los combos pedidos y descarta los inactivos o fuera de vigencia. */
+async function fetchCombosByIds(comboIds: string[]): Promise<Map<string, ComboRow>> {
+  const db = assertServerClient();
+  const { data, error } = await db
+    .from("combos")
+    .select("id, name, price, active, starts_at, ends_at")
+    .in("id", comboIds);
+
+  if (error) {
+    throw new OrderError("No se pudieron validar los combos.", 500);
+  }
+
+  const now = Date.now();
+  const map = new Map<string, ComboRow>();
+  for (const row of (data ?? []) as ComboRow[]) {
+    if (!row.active) continue;
+    const startsAt = row.starts_at ? new Date(row.starts_at).getTime() : null;
+    const endsAt = row.ends_at ? new Date(row.ends_at).getTime() : null;
+    if (startsAt && now < startsAt) continue;
+    if (endsAt && now > endsAt) continue;
+    map.set(row.id, row);
+  }
+  return map;
+}
+
+async function fetchComboItemsByIds(comboIds: string[]): Promise<ComboItemRow[]> {
+  const db = assertServerClient();
+  const { data, error } = await db
+    .from("combo_items")
+    .select("combo_id, product_id, quantity")
+    .in("combo_id", comboIds);
+
+  if (error) {
+    throw new OrderError("No se pudo validar la composición de los combos.", 500);
+  }
+  return (data ?? []) as ComboItemRow[];
+}
+
 function normalizeItems(items: CreateOrderInput["items"]) {
   const byId = new Map<string, number>();
   for (const item of items) {
@@ -89,17 +159,69 @@ function normalizeItems(items: CreateOrderInput["items"]) {
   return Array.from(byId.entries()).map(([productId, quantity]) => ({ productId, quantity }));
 }
 
+function normalizeCombos(combos: CreateOrderInput["combos"]) {
+  const byId = new Map<string, number>();
+  for (const combo of combos) {
+    byId.set(combo.comboId, (byId.get(combo.comboId) ?? 0) + combo.quantity);
+  }
+  return Array.from(byId.entries()).map(([comboId, quantity]) => ({ comboId, quantity }));
+}
+
 /**
  * Calcula subtotal, envío y total reutilizando la lógica de `shipping.ts`.
  * No confía en ningún precio recibido desde el navegador.
+ *
+ * Los combos se validan contra la base, se expanden en sus componentes y su
+ * precio especial se suma al subtotal. El stock de cada componente se valida
+ * de forma agregada junto con los productos individuales.
  */
 export async function calculateOrder(input: CreateOrderInput): Promise<CalculatedOrder> {
   const items = normalizeItems(input.items);
-  const productIds = items.map((item) => item.productId);
+  const combos = normalizeCombos(input.combos);
+
+  const comboMap = combos.length
+    ? await fetchCombosByIds(combos.map((combo) => combo.comboId))
+    : new Map<string, ComboRow>();
+  const comboItemRows = combos.length
+    ? await fetchComboItemsByIds(combos.map((combo) => combo.comboId))
+    : [];
+
+  // Agrega las cantidades requeridas por cada componente del combo.
+  const requiredByProduct = new Map<string, number>();
+  for (const item of items) {
+    requiredByProduct.set(item.productId, (requiredByProduct.get(item.productId) ?? 0) + item.quantity);
+  }
+  for (const combo of combos) {
+    const components = comboItemRows.filter((row) => row.combo_id === combo.comboId);
+    for (const component of components) {
+      requiredByProduct.set(
+        component.product_id,
+        (requiredByProduct.get(component.product_id) ?? 0) + component.quantity * combo.quantity
+      );
+    }
+  }
+
+  const productIds = Array.from(requiredByProduct.keys());
   const products = await fetchProductsByIds(productIds);
 
   const lineItems: OrderLineItem[] = [];
+  const comboLines: OrderComboLine[] = [];
   let subtotal = 0;
+
+  // Valida el stock agregado de cada producto (individual + combos).
+  for (const [productId, requiredQty] of requiredByProduct.entries()) {
+    const product = products.get(productId);
+    if (!product) {
+      throw new OrderError(`El producto ${productId} no existe o no está disponible.`, 400);
+    }
+    const stock = Number(product.stock ?? 0);
+    if (stock < requiredQty) {
+      throw new OrderError(
+        `Stock insuficiente para "${product.name}". Disponible: ${stock}.`,
+        409
+      );
+    }
+  }
 
   for (const item of items) {
     const product = products.get(item.productId);
@@ -108,16 +230,8 @@ export async function calculateOrder(input: CreateOrderInput): Promise<Calculate
     }
 
     const price = Number(product.price ?? 0);
-    const stock = Number(product.stock ?? 0);
-
     if (!Number.isFinite(price) || price <= 0) {
       throw new OrderError(`El producto ${item.productId} no tiene un precio válido.`, 409);
-    }
-    if (stock < item.quantity) {
-      throw new OrderError(
-        `Stock insuficiente para "${product.name}". Disponible: ${stock}.`,
-        409
-      );
     }
 
     const lineSubtotal = price * item.quantity;
@@ -128,6 +242,48 @@ export async function calculateOrder(input: CreateOrderInput): Promise<Calculate
       unitPrice: price,
       quantity: item.quantity,
       subtotal: lineSubtotal,
+    });
+  }
+
+  for (const combo of combos) {
+    const comboRow = comboMap.get(combo.comboId);
+    if (!comboRow) {
+      throw new OrderError("Uno de los combos no existe o no está disponible.", 400);
+    }
+
+    const price = Number(comboRow.price ?? 0);
+    if (!Number.isFinite(price) || price <= 0) {
+      throw new OrderError(`El combo "${comboRow.name}" no tiene un precio válido.`, 409);
+    }
+
+    const components: OrderComboComponent[] = comboItemRows
+      .filter((row) => row.combo_id === combo.comboId)
+      .map((row) => {
+        const product = products.get(row.product_id);
+        if (!product) {
+          throw new OrderError(`El producto del combo no está disponible.`, 400);
+        }
+        return {
+          productId: product.id,
+          name: product.name,
+          quantity: row.quantity * combo.quantity,
+          unitPrice: Number(product.price ?? 0),
+        };
+      });
+
+    if (components.length === 0) {
+      throw new OrderError(`El combo "${comboRow.name}" no tiene productos asociados.`, 409);
+    }
+
+    const comboSubtotal = price * combo.quantity;
+    subtotal += comboSubtotal;
+    comboLines.push({
+      comboId: comboRow.id,
+      name: comboRow.name,
+      unitPrice: price,
+      quantity: combo.quantity,
+      subtotal: comboSubtotal,
+      components,
     });
   }
 
@@ -142,6 +298,7 @@ export async function calculateOrder(input: CreateOrderInput): Promise<Calculate
 
   return {
     items: lineItems,
+    combos: comboLines,
     subtotal,
     shippingCost: quote.price,
     shippingLabel: quote.label,
@@ -204,6 +361,44 @@ export async function createOrder(input: CreateOrderInput): Promise<StoredOrder>
     throw new OrderError("No se pudieron guardar los productos del pedido.", 500);
   }
 
+  // Fotografía histórica de los combos vendidos (cabecera + componentes).
+  for (const combo of calculated.combos ?? []) {
+    const { data: insertedCombo, error: comboError } = await db
+      .from("order_combos")
+      .insert({
+        order_id: order.id,
+        combo_id: combo.comboId,
+        combo_name: combo.name,
+        quantity: combo.quantity,
+        unit_price: combo.unitPrice,
+        subtotal: combo.subtotal,
+      })
+      .select("id")
+      .single();
+
+    if (comboError || !insertedCombo) {
+      console.error("[orders] Error al insertar combo:", comboError);
+      await db.from("orders").update({ status: "cancelled" }).eq("id", order.id);
+      throw new OrderError("No se pudieron guardar los combos del pedido.", 500);
+    }
+
+    const { error: comboItemsError } = await db.from("order_combo_items").insert(
+      combo.components.map((component) => ({
+        order_combo_id: insertedCombo.id,
+        product_id: component.productId,
+        product_name: component.name,
+        quantity: component.quantity,
+        unit_price: component.unitPrice,
+      }))
+    );
+
+    if (comboItemsError) {
+      console.error("[orders] Error al insertar items del combo:", comboItemsError);
+      await db.from("orders").update({ status: "cancelled" }).eq("id", order.id);
+      throw new OrderError("No se pudieron guardar los productos del combo.", 500);
+    }
+  }
+
   return {
     ...calculated,
     id: order.id as string,
@@ -249,9 +444,40 @@ export async function getOrderById(orderId: string): Promise<StoredOrder | null>
     subtotal: Number(row.subtotal ?? 0),
   }));
 
+  const { data: combos } = await db
+    .from("order_combos")
+    .select("id, combo_id, combo_name, quantity, unit_price, subtotal")
+    .eq("order_id", orderId)
+    .order("created_at", { ascending: true });
+
+  const orderComboLines: OrderComboLine[] = [];
+  for (const comboRow of (combos ?? []) as Array<Record<string, unknown>>) {
+    const comboId = String(comboRow.id);
+    const { data: components } = await db
+      .from("order_combo_items")
+      .select("product_id, product_name, quantity, unit_price")
+      .eq("order_combo_id", comboId)
+      .order("created_at", { ascending: true });
+
+    orderComboLines.push({
+      comboId: comboRow.combo_id ? String(comboRow.combo_id) : "",
+      name: String(comboRow.combo_name ?? ""),
+      unitPrice: Number(comboRow.unit_price ?? 0),
+      quantity: Number(comboRow.quantity ?? 0),
+      subtotal: Number(comboRow.subtotal ?? 0),
+      components: ((components ?? []) as Array<Record<string, unknown>>).map((component) => ({
+        productId: String(component.product_id ?? ""),
+        name: String(component.product_name ?? ""),
+        quantity: Number(component.quantity ?? 0),
+        unitPrice: Number(component.unit_price ?? 0),
+      })),
+    });
+  }
+
   return {
     id: String(order.id),
     items: lineItems,
+    combos: orderComboLines,
     subtotal: Number(order.subtotal ?? 0),
     shippingCost: Number(order.shipping_cost ?? 0),
     shippingLabel: "",

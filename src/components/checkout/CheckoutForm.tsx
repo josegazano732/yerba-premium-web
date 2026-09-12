@@ -7,6 +7,17 @@ import { FieldErrors, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { LoaderCircle, Lock, MapPin, ShoppingBag, Truck } from "lucide-react";
 import { useCart } from "@/lib/cart-context";
+import {
+  cartItemCount,
+  cartItemImage,
+  cartItemKey,
+  cartItemLineTotal,
+  cartItemName,
+  cartItemUnitPrice,
+  cartComboItems,
+  cartProductItems,
+  cartSubtotal,
+} from "@/lib/cart";
 import { getShippingQuotes, ShippingQuote } from "@/lib/shipping";
 import { checkoutFormSchema, CheckoutFormValues } from "@/lib/orders/schema";
 import { formatCurrency } from "@/lib/format";
@@ -50,8 +61,8 @@ export function CheckoutForm() {
   const [submitting, setSubmitting] = useState(false);
   const [serverError, setServerError] = useState("");
 
-  const subtotal = cart.reduce((total, item) => total + item.product.price * item.quantity, 0);
-  const itemCount = cart.reduce((total, item) => total + item.quantity, 0);
+  const subtotal = cartSubtotal(cart);
+  const itemCount = cartItemCount(cart);
 
   const {
     register,
@@ -124,8 +135,12 @@ export function CheckoutForm() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          items: cart.map((item) => ({
+          items: cartProductItems(cart).map((item) => ({
             productId: item.product.id,
+            quantity: item.quantity,
+          })),
+          combos: cartComboItems(cart).map((item) => ({
+            comboId: item.combo.id,
             quantity: item.quantity,
           })),
           customer: {
@@ -319,15 +334,15 @@ export function CheckoutForm() {
           </h2>
           <ul className="mt-5 space-y-4">
             {cart.map((item) => (
-              <li key={item.product.id} className="flex items-center gap-3">
+              <li key={cartItemKey(item)} className="flex items-center gap-3">
                 <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-[6px] bg-secondary/30">
-                  <Image src={item.product.image} alt={item.product.name} fill sizes="56px" className="object-cover" />
+                  <Image src={cartItemImage(item)} alt={cartItemName(item)} fill sizes="56px" className="object-cover" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-[#20341d]">{item.product.name}</p>
-                  <p className="text-xs text-muted">{item.quantity} x {formatCurrency.format(item.product.price)}</p>
+                  <p className="truncate text-sm font-semibold text-[#20341d]">{cartItemName(item)}</p>
+                  <p className="text-xs text-muted">{item.quantity} x {formatCurrency.format(cartItemUnitPrice(item))}</p>
                 </div>
-                <strong className="text-sm text-[#20341d]">{formatCurrency.format(item.product.price * item.quantity)}</strong>
+                <strong className="text-sm text-[#20341d]">{formatCurrency.format(cartItemLineTotal(item))}</strong>
               </li>
             ))}
           </ul>

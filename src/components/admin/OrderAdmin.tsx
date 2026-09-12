@@ -23,6 +23,22 @@ type OrderItem = {
   subtotal: number;
 };
 
+type OrderComboComponent = {
+  productId: string;
+  productName: string;
+  quantity: number;
+  unitPrice: number;
+};
+
+type OrderCombo = {
+  comboId: string;
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  subtotal: number;
+  components: OrderComboComponent[];
+};
+
 type AdminOrder = {
   id: string;
   customerName: string;
@@ -44,6 +60,7 @@ type AdminOrder = {
   shippingEta: string | null;
   createdAt: string;
   items: OrderItem[];
+  combos: OrderCombo[];
 };
 
 const currency = new Intl.NumberFormat("es-AR", {
@@ -224,6 +241,7 @@ export function OrderAdmin() {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link href="/admin/productos" className="inline-flex h-11 items-center gap-2 border border-white/25 px-5 text-sm font-bold transition hover:bg-white/10">Productos</Link>
+            <Link href="/admin/combos" className="inline-flex h-11 items-center gap-2 border border-white/25 px-5 text-sm font-bold transition hover:bg-white/10">Combos</Link>
             <button type="button" onClick={() => void loadOrders()} className="inline-flex h-11 items-center gap-2 bg-[#d7e68c] px-5 text-sm font-extrabold text-[#172116]"><Clock size={18} /> Actualizar</button>
             <button type="button" onClick={() => supabase?.auth.signOut()} className="h-11 border border-white/25 px-5 text-sm font-bold hover:bg-white/10">Cerrar sesión</button>
           </div>
@@ -365,6 +383,33 @@ export function OrderAdmin() {
                     <div className="flex justify-between font-serif text-lg font-semibold text-[#1d2d1a]"><span>Total</span><span>{currency.format(selected.total)}</span></div>
                   </div>
                 </section>
+
+                {selected.combos.length > 0 ? (
+                  <section>
+                    <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-muted">Combos</h2>
+                    <ul className="mt-3 divide-y divide-[#e5e6e1]">
+                      {selected.combos.map((combo, index) => (
+                        <li key={`${combo.comboId}-${index}`} className="py-3 text-sm">
+                          <div className="flex items-center justify-between gap-4">
+                            <div>
+                              <p className="font-bold text-[#1d2d1a]">{combo.name}</p>
+                              <p className="text-xs text-muted">{combo.quantity} × {currency.format(combo.unitPrice)}</p>
+                            </div>
+                            <p className="font-bold">{currency.format(combo.subtotal)}</p>
+                          </div>
+                          <ul className="mt-2 space-y-1 pl-4 text-xs text-muted">
+                            {combo.components.map((component) => (
+                              <li key={component.productId} className="flex justify-between gap-4">
+                                <span>{component.productName}</span>
+                                <span>{component.quantity} × {currency.format(component.unitPrice)}</span>
+                              </li>
+                            ))}
+                          </ul>
+                        </li>
+                      ))}
+                    </ul>
+                  </section>
+                ) : null}
 
                 <section>
                   <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-muted">Pago</h2>

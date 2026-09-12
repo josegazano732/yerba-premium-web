@@ -56,6 +56,24 @@ type ItemRow = {
   subtotal: number;
 };
 
+type ComboRow = {
+  id: string;
+  order_id: string;
+  combo_id: string | null;
+  combo_name: string;
+  quantity: number;
+  unit_price: number;
+  subtotal: number;
+};
+
+type ComboItemRow = {
+  order_combo_id: string;
+  product_id: string;
+  product_name: string;
+  quantity: number;
+  unit_price: number;
+};
+
 export async function GET(request: Request) {
   const user = await resolveSession(request);
   if (!user) return NextResponse.json({ error: "No autorizado." }, { status: 401 });
@@ -96,6 +114,49 @@ export async function GET(request: Request) {
     itemsByOrder.set(item.order_id, list);
   }
 
+  const { data: combos, error: combosError } = orderIds.length
+    ? await supabaseServer
+        .from("order_combos")
+        .select("id, order_id, combo_id, combo_name, quantity, unit_price, subtotal")
+        .in("order_id", orderIds)
+        .order("created_at", { ascending: true })
+    : { data: [], error: null };
+
+  if (combosError) {
+    console.error("[admin/orders] Error al listar combos:", combosError.message);
+    return NextResponse.json({ error: "No se pudieron cargar los pedidos." }, { status: 500 });
+  }
+
+  const comboRows = (combos ?? []) as ComboRow[];
+  const comboIds = comboRows.map((combo) => combo.id);
+
+  const { data: comboItems, error: comboItemsError } = comboIds.length
+    ? await supabaseServer
+        .from("order_combo_items")
+        .select("order_combo_id, product_id, product_name, quantity, unit_price")
+        .in("order_combo_id", comboIds)
+        .order("created_at", { ascending: true })
+    : { data: [], error: null };
+
+  if (comboItemsError) {
+    console.error("[admin/orders] Error al listar componentes de combos:", comboItemsError.message);
+    return NextResponse.json({ error: "No se pudieron cargar los pedidos." }, { status: 500 });
+  }
+
+  const comboItemsByCombo = new Map<string, ComboItemRow[]>();
+  for (const component of (comboItems ?? []) as ComboItemRow[]) {
+    const list = comboItemsByCombo.get(component.order_combo_id) ?? [];
+    list.push(component);
+    comboItemsByCombo.set(component.order_combo_id, list);
+  }
+
+  const combosByOrder = new Map<string, ComboRow[]>();
+  for (const combo of comboRows) {
+    const list = combosByOrder.get(combo.order_id) ?? [];
+    list.push(combo);
+    combosByOrder.set(combo.order_id, list);
+  }
+
   const mapped = rows.map((order) => ({
     id: order.id,
     customerName: order.customer_name,
@@ -122,6 +183,19 @@ export async function GET(request: Request) {
       quantity: Number(item.quantity ?? 0),
       unitPrice: Number(item.unit_price ?? 0),
       subtotal: Number(item.subtotal ?? 0),
+    })),
+    combos: (combosByOrder.get(order.id) ?? []).map((combo) => ({
+      comboId: combo.combo_id ?? "",
+      name: combo.combo_name,
+      quantity: Number(combo.quantity ?? 0),
+      unitPrice: Number(combo.unit_price ?? 0),
+      subtotal: Number(combo.subtotal ?? 0),
+      components: (comboItemsByCombo.get(combo.id) ?? []).map((component) => ({
+        productId: component.product_id,
+        productName: component.product_name,
+        quantity: Number(component.quantity ?? 0),
+        unitPrice: Number(component.unit_price ?? 0),
+      })),
     })),
   }));
 

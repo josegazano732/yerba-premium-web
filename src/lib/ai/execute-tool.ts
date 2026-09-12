@@ -1,6 +1,6 @@
 import { mapProductDetails, Product, ProductDetailsRow } from "@/data/products";
 import { supabase } from "@/lib/supabase";
-import { CartItem } from "@/lib/cart";
+import { CartItem, cartProductItems, cartSubtotal } from "@/lib/cart";
 import { CartAction } from "@/lib/ai/types";
 
 export type CommerceErrorCode =
@@ -218,7 +218,7 @@ async function addToCart(productId: string, quantity: number, cart: CartItem[]):
     return commerceError("OUT_OF_STOCK", `${product.name} no tiene stock disponible.`);
   }
 
-  const existingQty = cart.find((item) => item.product.id === productId)?.quantity ?? 0;
+  const existingQty = cartProductItems(cart).find((item) => item.product.id === productId)?.quantity ?? 0;
   if (existingQty + quantity > product.stock) {
     return commerceError(
       "OUT_OF_STOCK",
@@ -250,7 +250,7 @@ async function updateCartQuantity(
     return commerceError("INVALID_QUANTITY", "La cantidad debe ser un entero igual o mayor a 0.");
   }
 
-  const item = cart.find((entry) => entry.product.id === productId);
+  const item = cartProductItems(cart).find((entry) => entry.product.id === productId);
   if (!item) return commerceError("CART_ITEM_NOT_FOUND", "El producto no está en el carrito.");
   if (quantity === 0) return removeFromCart(productId, cart);
 
@@ -268,7 +268,7 @@ async function updateCartQuantity(
 }
 
 function removeFromCart(productId: string, cart: CartItem[]): ToolResult {
-  if (!productId || !cart.some((item) => item.product.id === productId)) {
+  if (!productId || !cartProductItems(cart).some((item) => item.product.id === productId)) {
     return commerceError("CART_ITEM_NOT_FOUND", "El producto no está en el carrito.");
   }
 
@@ -279,11 +279,11 @@ function removeFromCart(productId: string, cart: CartItem[]): ToolResult {
 }
 
 function getCartState(cart: CartItem[]): ToolResult {
-  const total = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
+  const total = cartSubtotal(cart);
   return {
     result: {
       success: true,
-      items: cart.map((item) => ({
+      items: cartProductItems(cart).map((item) => ({
         product_id: item.product.id,
         name: item.product.name,
         quantity: item.quantity,

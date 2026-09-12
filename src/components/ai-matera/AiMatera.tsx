@@ -6,6 +6,18 @@ import { ArrowUp, Minus, Plus, ShoppingBag, X } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { Product } from "@/data/products";
 import { useCart } from "@/lib/cart-context";
+import {
+  cartItemCount,
+  cartItemImage,
+  cartItemKey,
+  cartItemLineTotal,
+  cartItemName,
+  cartItemUnitPrice,
+  cartProductItems,
+  cartSubtotal,
+  isComboItem,
+  isProductItem,
+} from "@/lib/cart";
 import { site } from "@/data/site";
 import type { AiMessage, AiChatResponse, CartAction } from "@/lib/ai/types";
 import type { CommerceContext } from "@/lib/ai/commerce-context";
@@ -24,7 +36,14 @@ const WELCOME: AiMessage = {
 };
 
 export function AiMatera() {
-  const { cart, addToCart, changeQuantity, removeFromCart } = useCart();
+  const {
+    cart,
+    addToCart,
+    changeQuantity,
+    removeFromCart,
+    changeComboQuantity,
+    removeCombo,
+  } = useCart();
 
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"chat" | "order">("chat");
@@ -35,8 +54,8 @@ export function AiMatera() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
-  const cartTotal = cart.reduce((sum, item) => sum + item.product.price * item.quantity, 0);
-  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+  const cartTotal = cartSubtotal(cart);
+  const cartCount = cartItemCount(cart);
 
   useEffect(() => {
     if (isOpen) {
@@ -57,7 +76,7 @@ export function AiMatera() {
       if (action.type === "add") {
         addToCart(action.product, action.quantity);
       } else if (action.type === "update") {
-        const item = cart.find((i) => i.product.id === action.productId);
+        const item = cartProductItems(cart).find((i) => i.product.id === action.productId);
         if (item) {
           const delta = action.quantity - item.quantity;
           if (delta !== 0) changeQuantity(action.productId, delta);
@@ -140,7 +159,7 @@ export function AiMatera() {
 
   function buildWhatsappLink() {
     const lines = cart.map((item, i) =>
-      `${i + 1}) ${item.product.name}\n   ${item.quantity} x ${currency.format(item.product.price)} = ${currency.format(item.product.price * item.quantity)}`
+      `${i + 1}) ${cartItemName(item)}\n   ${item.quantity} x ${currency.format(cartItemUnitPrice(item))} = ${currency.format(cartItemLineTotal(item))}`
     );
     const msg = [
       "Hola! Quiero hacer este pedido (armado con el Agente Matero):",
@@ -345,7 +364,7 @@ export function AiMatera() {
                                           key={product.id}
                                           product={product}
                                           onAdd={handleAddFromAI}
-                                          isAdded={cart.some((item) => item.product.id === product.id)}
+                                          isAdded={cartProductItems(cart).some((item) => item.product.id === product.id)}
                                         />
                                       ))}
                                     </div>
@@ -453,17 +472,22 @@ export function AiMatera() {
                     ) : (
                       <div className="space-y-2.5">
                         {cart.map((item) => (
-                          <div key={item.product.id} className="flex gap-2 rounded-xl border border-[#ece7de] bg-[#faf7f2] p-2.5">
+                          <div key={cartItemKey(item)} className="flex gap-2 rounded-xl border border-[#ece7de] bg-[#faf7f2] p-2.5">
                             <div className="relative h-11 w-11 shrink-0 overflow-hidden rounded-lg bg-secondary/30">
-                              <Image src={item.product.image} alt={item.product.name} fill sizes="44px" className="object-cover" />
+                              <Image src={cartItemImage(item)} alt={cartItemName(item)} fill sizes="44px" className="object-cover" />
                             </div>
                             <div className="min-w-0 flex-1">
-                              <p className="line-clamp-2 text-[11px] font-semibold leading-snug text-[#20341d]">{item.product.name}</p>
+                              <div className="flex items-center gap-1.5">
+                                {isComboItem(item) ? (
+                                  <span className="rounded-full bg-[#d7e68c] px-1.5 py-px text-[9px] font-bold uppercase tracking-wide text-[#20341d]">Combo</span>
+                                ) : null}
+                                <p className="line-clamp-2 text-[11px] font-semibold leading-snug text-[#20341d]">{cartItemName(item)}</p>
+                              </div>
                               <div className="mt-1.5 flex items-center justify-between gap-1">
                                 <div className="inline-flex h-6 items-center rounded-full border border-[#d7d2c7] bg-white text-xs">
                                   <button
                                     type="button"
-                                    onClick={() => changeQuantity(item.product.id, -1)}
+                                    onClick={() => (isComboItem(item) ? changeComboQuantity(item.combo.id, -1) : isProductItem(item) ? changeQuantity(item.product.id, -1) : undefined)}
                                     className="grid h-full w-6 place-items-center transition hover:text-primary"
                                     aria-label="Quitar uno"
                                   >
@@ -472,19 +496,19 @@ export function AiMatera() {
                                   <span className="w-5 text-center text-[11px] font-bold">{item.quantity}</span>
                                   <button
                                     type="button"
-                                    onClick={() => changeQuantity(item.product.id, 1)}
+                                    onClick={() => (isComboItem(item) ? changeComboQuantity(item.combo.id, 1) : isProductItem(item) ? changeQuantity(item.product.id, 1) : undefined)}
                                     className="grid h-full w-6 place-items-center transition hover:text-primary"
                                     aria-label="Agregar uno"
                                   >
                                     <Plus size={10} />
                                   </button>
                                 </div>
-                                <p className="text-xs font-bold text-[#20341d]">{currency.format(item.product.price * item.quantity)}</p>
+                                <p className="text-xs font-bold text-[#20341d]">{currency.format(cartItemLineTotal(item))}</p>
                                 <button
                                   type="button"
-                                  onClick={() => removeFromCart(item.product.id)}
+                                  onClick={() => (isComboItem(item) ? removeCombo(item.combo.id) : isProductItem(item) ? removeFromCart(item.product.id) : undefined)}
                                   className="text-[10px] font-medium text-muted transition hover:text-red-500"
-                                  aria-label={`Quitar ${item.product.name}`}
+                                  aria-label={`Quitar ${cartItemName(item)}`}
                                 >
                                   ✕
                                 </button>

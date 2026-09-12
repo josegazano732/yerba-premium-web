@@ -12,6 +12,18 @@ import { supabase } from "@/lib/supabase";
 import { fetchPriceBounds } from "@/lib/catalog";
 import { buildPriceBrackets, deriveMaterial, matchesPriceBracket } from "@/lib/facets";
 import { useCart } from "@/lib/cart-context";
+import {
+  cartItemCount,
+  cartItemImage,
+  cartItemKey,
+  cartItemLineTotal,
+  cartItemName,
+  cartItemUnitPrice,
+  cartProductItems,
+  cartSubtotal,
+  isComboItem,
+  isProductItem,
+} from "@/lib/cart";
 import { ProductCard } from "./ProductCard";
 import { ProductCardSkeleton } from "./ProductCardSkeleton";
 import { ProductDetail } from "./ProductDetail";
@@ -36,7 +48,14 @@ export function ProductGrid() {
   const [category, setCategory] = useState("Todos");
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("featured");
-  const { cart, addToCart: cartAdd, changeQuantity, removeFromCart } = useCart();
+  const {
+    cart,
+    addToCart: cartAdd,
+    changeQuantity,
+    removeFromCart,
+    changeComboQuantity,
+    removeCombo,
+  } = useCart();
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [addedProduct, setAddedProduct] = useState<Product | null>(null);
@@ -195,15 +214,16 @@ export function ProductGrid() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [addedProduct]);
 
-  const itemCount = cart.reduce((total, item) => total + item.quantity, 0);
-  const subtotal = cart.reduce((total, item) => total + item.product.price * item.quantity, 0);
+  const itemCount = cartItemCount(cart);
+  const subtotal = cartSubtotal(cart);
   const selectedQuote = shippingQuotes.find((quote) => quote.id === selectedQuoteId) ?? shippingQuotes[0] ?? null;
   const shippingCost = selectedQuote?.price ?? 0;
   const orderTotal = subtotal + shippingCost;
   const missingForFreeShipping = Math.max(FREE_SHIPPING_THRESHOLD - subtotal, 0);
   const freeShippingProgress = Math.min(subtotal / FREE_SHIPPING_THRESHOLD, 1);
+  const cartProductIds = new Set(cartProductItems(cart).map((item) => item.product.id));
   const crossSellProducts = catalogProducts
-    .filter((product) => !cart.some((item) => item.product.id === product.id))
+    .filter((product) => !cartProductIds.has(product.id))
     .slice(0, 4);
 
   useEffect(() => {
@@ -233,7 +253,8 @@ export function ProductGrid() {
     setQuotedPostalCode(postalCode.trim());
   }
 
-  const addedQuantity = cart.find((item) => item.product.id === addedProduct?.id)?.quantity ?? 1;
+  const addedQuantity =
+    cartProductItems(cart).find((item) => item.product.id === addedProduct?.id)?.quantity ?? 1;
   const suggestedProducts = addedProduct
     ? [
         ...catalogProducts.filter((product) => product.id !== addedProduct.id && product.category === addedProduct.category),
@@ -248,7 +269,7 @@ export function ProductGrid() {
 
   function buildWhatsappLink() {
     const lines = cart.map((item, index) =>
-      `${index + 1}) ${item.product.name}\n   ${item.quantity} x ${currency.format(item.product.price)} = ${currency.format(item.product.price * item.quantity)}`
+      `${index + 1}) ${cartItemName(item)}\n   ${item.quantity} x ${currency.format(cartItemUnitPrice(item))} = ${currency.format(cartItemLineTotal(item))}`
     );
 
     const message = [
@@ -630,24 +651,48 @@ export function ProductGrid() {
                   <>
                     <div className="space-y-5">
                       {cart.map((item) => (
-                        <div key={item.product.id} className="flex gap-4 border-b border-[#e2ddd3] pb-5">
+                        <div key={cartItemKey(item)} className="flex gap-4 border-b border-[#e2ddd3] pb-5">
                           <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-[6px] bg-secondary/30">
-                            <Image src={item.product.image} alt={item.product.name} fill sizes="80px" className="object-cover" />
+                            <Image src={cartItemImage(item)} alt={cartItemName(item)} fill sizes="80px" className="object-cover" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <div className="flex items-start justify-between gap-3">
-                              <h3 className="text-sm font-semibold leading-snug text-[#20341d]">{item.product.name}</h3>
-                              <button type="button" onClick={() => removeFromCart(item.product.id)} className="shrink-0 text-xs font-semibold text-muted underline-offset-2 transition hover:text-red-700 hover:underline" aria-label={`Quitar ${item.product.name}`}>
+                              <div>
+                                {isComboItem(item) ? (
+                                  <span className="mb-1 inline-block rounded-full bg-[#d7e68c] px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-[#20341d]">Combo</span>
+                                ) : null}
+                                <h3 className="text-sm font-semibold leading-snug text-[#20341d]">{cartItemName(item)}</h3>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => (isComboItem(item) ? removeCombo(item.combo.id) : isProductItem(item) ? removeFromCart(item.product.id) : undefined)}
+                                className="shrink-0 text-xs font-semibold text-muted underline-offset-2 transition hover:text-red-700 hover:underline"
+                                aria-label={`Quitar ${cartItemName(item)}`}
+                              >
                                 Borrar
                               </button>
                             </div>
                             <div className="mt-3 flex items-center justify-between gap-3">
                               <div className="inline-flex h-9 items-center rounded-full border border-[#d7d2c7] bg-white">
-                                <button type="button" onClick={() => changeQuantity(item.product.id, -1)} className="grid h-full w-9 place-items-center" aria-label="Quitar uno"><Minus size={14} /></button>
+                                <button
+                                  type="button"
+                                  onClick={() => (isComboItem(item) ? changeComboQuantity(item.combo.id, -1) : isProductItem(item) ? changeQuantity(item.product.id, -1) : undefined)}
+                                  className="grid h-full w-9 place-items-center"
+                                  aria-label="Quitar uno"
+                                >
+                                  <Minus size={14} />
+                                </button>
                                 <span className="w-8 text-center text-sm font-bold">{item.quantity}</span>
-                                <button type="button" onClick={() => changeQuantity(item.product.id, 1)} className="grid h-full w-9 place-items-center" aria-label="Agregar uno"><Plus size={14} /></button>
+                                <button
+                                  type="button"
+                                  onClick={() => (isComboItem(item) ? changeComboQuantity(item.combo.id, 1) : isProductItem(item) ? changeQuantity(item.product.id, 1) : undefined)}
+                                  className="grid h-full w-9 place-items-center"
+                                  aria-label="Agregar uno"
+                                >
+                                  <Plus size={14} />
+                                </button>
                               </div>
-                              <strong className="text-base text-[#20341d]">{currency.format(item.product.price * item.quantity)}</strong>
+                              <strong className="text-base text-[#20341d]">{currency.format(cartItemLineTotal(item))}</strong>
                             </div>
                           </div>
                         </div>

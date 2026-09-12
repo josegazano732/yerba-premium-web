@@ -7,6 +7,7 @@ import { getStoredSystemPrompt } from "@/lib/ai/settings";
 import { executeTool } from "@/lib/ai/execute-tool";
 import type { AiChatRequest, AiChatResponse, CartAction } from "@/lib/ai/types";
 import type { Product } from "@/data/products";
+import { cartProductItems } from "@/lib/cart";
 import type { CartItem } from "@/lib/cart";
 import { site } from "@/data/site";
 import {
@@ -28,7 +29,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       previous: commerceContext,
       message,
       currentProductId,
-      cart: typedCart.map((item) => ({
+      cart: cartProductItems(typedCart).map((item) => ({
         productId: item.product.id,
         quantity: item.quantity,
         unitPrice: item.product.price,

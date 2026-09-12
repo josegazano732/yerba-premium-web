@@ -29,7 +29,7 @@ export async function POST(request: Request) {
     if (order.paymentStatus === "approved" || order.status === "confirmed") {
       return NextResponse.json({ error: "El pedido ya fue pagado." }, { status: 409 });
     }
-    if (!order.items.length) {
+    if (!order.items.length && !(order.combos?.length)) {
       return NextResponse.json({ error: "El pedido no tiene productos." }, { status: 409 });
     }
 
@@ -44,15 +44,23 @@ export async function POST(request: Request) {
       }
     }
 
+    const productItems = order.items.map((item) => ({
+      id: item.productId,
+      title: item.name,
+      quantity: item.quantity,
+      unit_price: item.unitPrice,
+    }));
+    const comboItems = (order.combos ?? []).map((combo) => ({
+      id: combo.comboId || combo.name,
+      title: `Combo ${combo.name}`,
+      quantity: combo.quantity,
+      unit_price: combo.unitPrice,
+    }));
+
     const { id: preferenceId, initPoint } = await createCheckoutPreference({
       orderId: order.id,
       customerEmail: order.customerEmail,
-      items: order.items.map((item) => ({
-        id: item.productId,
-        title: item.name,
-        quantity: item.quantity,
-        unit_price: item.unitPrice,
-      })),
+      items: [...productItems, ...comboItems],
     });
 
     if (supabaseServer) {

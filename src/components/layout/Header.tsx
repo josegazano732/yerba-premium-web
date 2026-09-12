@@ -2,7 +2,7 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import Image from "next/image";
-import { Instagram, Menu, Search, ShoppingBag, X } from "lucide-react";
+import { CreditCard, Instagram, MapPin, Menu, Search, ShoppingBag, Truck, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { BrandLogo } from "@/components/brand/BrandLogo";
@@ -46,9 +46,21 @@ const visualFallbackCards = [
 ];
 
 const announcements = [
-  { icon: "🚚", text: `Envío GRATIS a partir de ${formatPrice(FREE_SHIPPING_THRESHOLD)}` },
-  { icon: "💳", text: "Pagá en cuotas con tarjeta de crédito" },
-  { icon: "🇦🇷", text: "Cobertura nacional: enviamos a todo el país" }
+  {
+    icon: Truck,
+    eyebrow: "Envío gratis",
+    text: `Desde ${formatPrice(FREE_SHIPPING_THRESHOLD)}`
+  },
+  {
+    icon: CreditCard,
+    eyebrow: "Compra simple",
+    text: "Pagá con tarjeta o Mercado Pago"
+  },
+  {
+    icon: MapPin,
+    eyebrow: "Desde Misiones",
+    text: "Envíos a todo el país"
+  }
 ];
 
 export function Header() {
@@ -142,20 +154,29 @@ export function Header() {
           : "bg-background/95 shadow-none"
       }`}
     >
-      <div className="cosmic-announcement-bar">
+      <aside className="cosmic-announcement-bar" aria-label="Beneficios de compra">
+        <div className="announcement-glow" aria-hidden="true" />
         <div className="announcement-track">
           {[0, 1].map((copy) => (
             <div key={copy} aria-hidden={copy === 1} className="announcement-copy">
-              {announcements.map((item) => (
+              {announcements.map((item, index) => (
                 <div key={item.text} className="announcement-item">
-                  <span aria-hidden="true">{item.icon}</span>
-                  <span>{item.text}</span>
+                  <span className="announcement-icon" aria-hidden="true">
+                    <item.icon strokeWidth={1.8} />
+                  </span>
+                  <span className="announcement-message">
+                    <strong>{item.eyebrow}</strong>
+                    <span>{item.text}</span>
+                  </span>
+                  {index < announcements.length - 1 ? (
+                    <span className="announcement-separator" aria-hidden="true" />
+                  ) : null}
                 </div>
               ))}
             </div>
           ))}
         </div>
-      </div>
+      </aside>
 
       <Container className="relative z-20 grid h-20 grid-cols-[44px_1fr_96px] items-center gap-2 sm:grid-cols-[44px_1fr_132px] lg:grid-cols-[1fr_auto_1fr] lg:gap-4">
         <div className="flex w-11 items-center justify-start lg:w-auto">

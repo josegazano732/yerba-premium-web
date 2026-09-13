@@ -1,10 +1,13 @@
 import { Badge } from "@/components/ui/Badge";
 import { Container } from "@/components/ui/Container";
 import { Leaf, PackageCheck, Sparkles } from "lucide-react";
+import { unstable_noStore as noStore } from "next/cache";
 import { fetchActiveCombos, fetchCombosEnabled } from "@/lib/combos";
 import { ComboCard } from "./ComboCard";
 
 export async function CombosSection() {
+  noStore();
+
   const enabled = await fetchCombosEnabled();
   if (!enabled) return null;
 

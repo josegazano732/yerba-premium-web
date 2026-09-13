@@ -6,8 +6,7 @@ const isDevelopment = process.env.NODE_ENV === "development";
 
 const nextConfig: NextConfig = {
   distDir: isDevelopment ? ".next-dev" : ".next",
-  // GitHub Pages necesita export estático; Vercel/local usan Next.js completo (API routes).
-  output: isGithubActions ? "export" : undefined,
+  output: "export",
   basePath: isGithubActions ? `/${repositoryName}` : undefined,
   assetPrefix: isGithubActions ? `/${repositoryName}/` : undefined,
   env: {

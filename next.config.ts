@@ -1,12 +1,13 @@
 import type { NextConfig } from "next";
 
 const isGithubActions = process.env.GITHUB_ACTIONS === "true";
+const isVercel = process.env.VERCEL === "1";
 const repositoryName = "yerba-premium-web";
 const isDevelopment = process.env.NODE_ENV === "development";
 
 const nextConfig: NextConfig = {
   distDir: isDevelopment ? ".next-dev" : ".next",
-  output: isGithubActions ? "export" : undefined,
+  output: isGithubActions && !isVercel ? "export" : undefined,
   basePath: isGithubActions ? `/${repositoryName}` : undefined,
   assetPrefix: isGithubActions ? `/${repositoryName}/` : undefined,
   env: {

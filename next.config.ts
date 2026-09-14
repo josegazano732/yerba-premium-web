@@ -6,7 +6,7 @@ const isDevelopment = process.env.NODE_ENV === "development";
 
 const nextConfig: NextConfig = {
   distDir: isDevelopment ? ".next-dev" : ".next",
-  output: "export",
+  output: isGithubActions ? "export" : undefined,
   basePath: isGithubActions ? `/${repositoryName}` : undefined,
   assetPrefix: isGithubActions ? `/${repositoryName}/` : undefined,
   env: {

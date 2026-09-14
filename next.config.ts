@@ -11,7 +11,11 @@ const nextConfig: NextConfig = {
   basePath: isGithubActions ? `/${repositoryName}` : undefined,
   assetPrefix: isGithubActions ? `/${repositoryName}/` : undefined,
   env: {
-    NEXT_PUBLIC_BASE_PATH: isGithubActions ? `/${repositoryName}` : ""
+    NEXT_PUBLIC_BASE_PATH: isGithubActions ? `/${repositoryName}` : "",
+    NEXT_PUBLIC_BUILD_MARKER:
+      process.env.VERCEL_GIT_COMMIT_SHA?.slice(0, 7) ??
+      process.env.GITHUB_SHA?.slice(0, 7) ??
+      "local"
   },
   images: {
     unoptimized: true,

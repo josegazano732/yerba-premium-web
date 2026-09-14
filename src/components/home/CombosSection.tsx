@@ -7,6 +7,8 @@ import { Leaf, PackageCheck, Sparkles } from "lucide-react";
 import { Combo, fetchActiveCombos, fetchCombosEnabled } from "@/lib/combos";
 import { ComboCard } from "./ComboCard";
 
+const buildMarker = process.env.NEXT_PUBLIC_BUILD_MARKER ?? "local";
+
 export function CombosSection() {
   const [ready, setReady] = useState(false);
   const [enabled, setEnabled] = useState(false);
@@ -20,6 +22,11 @@ export function CombosSection() {
       const activeCombos = sectionEnabled ? await fetchActiveCombos() : [];
 
       if (cancelled) return;
+      console.info("[combos-section]", {
+        buildMarker,
+        sectionEnabled,
+        combosCount: activeCombos.length,
+      });
       setEnabled(sectionEnabled);
       setCombos(activeCombos);
       setReady(true);
@@ -45,6 +52,9 @@ export function CombosSection() {
       <div aria-hidden className="absolute -left-24 top-0 h-72 w-72 rounded-full bg-[#a9c86f]/25 blur-3xl" />
       <div aria-hidden className="absolute -right-20 bottom-0 h-80 w-80 rounded-full bg-[#d8c4a6]/20 blur-3xl" />
       <Container>
+        <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.12em] text-[#e5ebdc]/70">
+          Debug build: {buildMarker}
+        </p>
         <div className="relative grid items-end gap-8 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-12">
           <div className="max-w-2xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-[#d7e68c]/35 bg-[#d7e68c]/10 px-3 py-1.5 text-[#edf4cd]">

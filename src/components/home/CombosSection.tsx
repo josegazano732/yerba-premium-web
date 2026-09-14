@@ -1,18 +1,37 @@
+"use client";
+
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Container } from "@/components/ui/Container";
 import { Leaf, PackageCheck, Sparkles } from "lucide-react";
-import { unstable_noStore as noStore } from "next/cache";
-import { fetchActiveCombos, fetchCombosEnabled } from "@/lib/combos";
+import { Combo, fetchActiveCombos, fetchCombosEnabled } from "@/lib/combos";
 import { ComboCard } from "./ComboCard";
 
-export async function CombosSection() {
-  noStore();
+export function CombosSection() {
+  const [ready, setReady] = useState(false);
+  const [enabled, setEnabled] = useState(false);
+  const [combos, setCombos] = useState<Combo[]>([]);
 
-  const enabled = await fetchCombosEnabled();
-  if (!enabled) return null;
+  useEffect(() => {
+    let cancelled = false;
 
-  const combos = await fetchActiveCombos();
-  if (combos.length === 0) return null;
+    async function loadCombosSection() {
+      const sectionEnabled = await fetchCombosEnabled();
+      const activeCombos = sectionEnabled ? await fetchActiveCombos() : [];
+
+      if (cancelled) return;
+      setEnabled(sectionEnabled);
+      setCombos(activeCombos);
+      setReady(true);
+    }
+
+    void loadCombosSection();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!ready || !enabled || combos.length === 0) return null;
 
   return (
     <section

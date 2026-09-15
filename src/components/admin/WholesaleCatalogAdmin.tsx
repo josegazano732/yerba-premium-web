@@ -34,7 +34,6 @@ type WholesaleCatalogAdminProps = {
 };
 
 const MAX_IMAGE_BYTES = 6 * 1024 * 1024;
-const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
 
 const emptyForm: CatalogForm = {
   title: "",
@@ -196,9 +195,9 @@ export function WholesaleCatalogAdmin({ categories }: Readonly<WholesaleCatalogA
     if (!file) return;
     setMessage("");
     setIsError(false);
-    if (!allowedTypes.includes(file.type)) {
+    if (!isSupportedImageFile(file)) {
       setIsError(true);
-      setMessage("Usa una imagen PNG, JPG o WebP.");
+      setMessage("Usa una imagen PNG, JPG, WebP o HEIC.");
       event.target.value = "";
       return;
     }
@@ -465,10 +464,10 @@ export function WholesaleCatalogAdmin({ categories }: Readonly<WholesaleCatalogA
                 </div>
                 <label className="inline-flex h-10 cursor-pointer items-center gap-2 border border-[#bfc5ba] bg-white px-3 text-xs font-bold text-[#263324] transition hover:border-primary hover:bg-[#f5f7f1]">
                   <PackageCheck size={16} /> Elegir imagen
-                  <input type="file" accept="image/png,image/jpeg,image/webp" onChange={selectImage} className="sr-only" />
+                  <input type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif" onChange={selectImage} className="sr-only" />
                 </label>
               </div>
-              <p className="mt-2 text-xs text-muted">PNG, JPG o WebP, hasta 6 MB. Se convierte automaticamente a WebP.</p>
+              <p className="mt-2 text-xs text-muted">PNG, JPG, WebP o HEIC (iPhone), hasta 6 MB. Se convierte automáticamente a WebP y se optimiza.</p>
             </div>
             <div className="lg:col-span-2">
               <button type="submit" disabled={isSaving} className="inline-flex h-11 items-center gap-2 bg-[#20341d] px-5 text-sm font-bold text-white disabled:opacity-60">
@@ -514,21 +513,51 @@ function parseProductsBucketPath(url: string) {
   return url.slice(index + marker.length);
 }
 
+const MAX_IMAGE_DIMENSION = 1600;
+const WEBP_QUALITY = 0.85;
+
+function isHeicFile(file: File): boolean {
+  return /^image\/hei[cf]$/i.test(file.type) || /\.hei[cf]$/i.test(file.name);
+}
+
+function isSupportedImageFile(file: File): boolean {
+  return /^image\/(png|jpeg|webp|heic|heif)$/i.test(file.type) || /\.(png|jpe?g|webp|heic|heif)$/i.test(file.name);
+}
+
+function fitWithinMaxDimension(width: number, height: number, maxDimension: number): { width: number; height: number } {
+  if (width <= maxDimension && height <= maxDimension) {
+    return { width, height };
+  }
+  const scale = maxDimension / Math.max(width, height);
+  return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
+}
+
 async function convertImageToWebp(file: File): Promise<File> {
-  const sourceUrl = URL.createObjectURL(file);
+  let sourceBlob: Blob = file;
+  let sourceUrl: string | null = null;
   try {
+    if (isHeicFile(file)) {
+      const { default: heic2any } = await import("heic2any");
+      const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
+      sourceBlob = Array.isArray(converted) ? converted[0] : converted;
+    }
+    sourceUrl = URL.createObjectURL(sourceBlob);
     const image = await loadImage(sourceUrl);
+    const { width, height } = fitWithinMaxDimension(image.naturalWidth, image.naturalHeight, MAX_IMAGE_DIMENSION);
     const canvas = document.createElement("canvas");
-    canvas.width = image.naturalWidth;
-    canvas.height = image.naturalHeight;
+    canvas.width = width;
+    canvas.height = height;
     const context = canvas.getContext("2d");
-    if (!context) throw new Error("No se pudo inicializar el procesador de imagenes.");
-    context.drawImage(image, 0, 0);
-    const blob = await canvasToWebpBlob(canvas, 0.9);
+    if (!context) throw new Error("No se pudo inicializar el procesador de imágenes.");
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    context.drawImage(image, 0, 0, width, height);
+
+    const blob = await canvasToWebpBlob(canvas, WEBP_QUALITY);
     const baseName = file.name.replace(/\.[^.]+$/, "").trim() || "catalogo";
     return new File([blob], `${baseName}.webp`, { type: "image/webp", lastModified: Date.now() });
   } finally {
-    URL.revokeObjectURL(sourceUrl);
+    if (sourceUrl) URL.revokeObjectURL(sourceUrl);
   }
 }
 

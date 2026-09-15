@@ -43,9 +43,15 @@ const currency = new Intl.NumberFormat("es-AR", {
   maximumFractionDigits: 0
 });
 
-export function ProductGrid() {
+export function ProductGrid({
+  initialCategory = "Todos",
+  onCategoryChange
+}: {
+  initialCategory?: string;
+  onCategoryChange?: (category: string) => void;
+}) {
   const [catalogProducts, setCatalogProducts] = useState<Product[]>([]);
-  const [category, setCategory] = useState("Todos");
+  const [category, setCategory] = useState(initialCategory);
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<Sort>("featured");
   const {
@@ -78,6 +84,7 @@ export function ProductGrid() {
 
   function handleCategorySelect(nextCategory: string) {
     setCategory(nextCategory);
+    onCategoryChange?.(nextCategory);
     setIsFilterOpen(false);
     requestAnimationFrame(() => {
       resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -156,13 +163,16 @@ export function ProductGrid() {
         return;
       }
       const match = catalogProducts.find((product) => product.category.toLowerCase() === hash);
-      if (match) setCategory(match.category);
+      if (match) {
+        setCategory(match.category);
+        onCategoryChange?.(match.category);
+      }
     }
 
     applyHash();
     window.addEventListener("hashchange", applyHash);
     return () => window.removeEventListener("hashchange", applyHash);
-  }, [catalogProducts]);
+  }, [catalogProducts, onCategoryChange]);
 
   const visibleProducts = catalogProducts
     .filter((product) => category === "Todos" || product.category === category)
@@ -312,7 +322,7 @@ export function ProductGrid() {
             {category !== "Todos" ? (
               <button
                 type="button"
-                onClick={() => setCategory("Todos")}
+                onClick={() => handleCategorySelect("Todos")}
                 className="inline-flex h-11 items-center gap-2 rounded-full bg-[#20341d] px-4 text-sm font-bold text-white transition hover:bg-primary"
                 aria-label={`Quitar filtro ${category}`}
               >

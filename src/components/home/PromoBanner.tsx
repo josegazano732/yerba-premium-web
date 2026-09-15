@@ -69,13 +69,13 @@ export function PromoBanner() {
       <Container className="max-w-[92rem]">
         <div className="grid overflow-hidden rounded-[2rem] border border-[#7c925f]/25 bg-white/70 shadow-[0_28px_70px_-28px_rgba(32,52,29,0.35)] ring-1 ring-white/70 md:grid-cols-2">
           {/* Columna izquierda: imagen lifestyle a todo el alto */}
-          <div className="relative min-h-[300px] w-full overflow-hidden sm:min-h-[420px] md:min-h-[540px]">
+          <div className="relative min-h-[300px] w-full overflow-hidden bg-[#fffdf8] sm:min-h-[420px] md:min-h-[540px]">
             <Image
               src={image}
               alt="Mate y termo de Mate Tierra personalizados con un sticker premium aplicado"
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
-              className="object-cover object-center"
+              className="object-contain object-center p-3 sm:p-4"
             />
             <div
               aria-hidden="true"

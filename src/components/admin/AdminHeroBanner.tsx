@@ -7,7 +7,6 @@ import { bannerPath, bannerSlots, bannerUrl } from "@/components/home/HeroBanner
 import { supabase } from "@/lib/supabase";
 
 const maxFileSize = 6 * 1024 * 1024;
-const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
 
 type SlotState = {
   file: File | null;
@@ -34,7 +33,7 @@ export function AdminHeroBanner({
   pathFor = bannerPath,
   urlFor = bannerUrl,
   slotLabel = "Banner",
-  hint = "Recomendado: 2000 x 1100 px, PNG/JPG/WebP, máximo 6 MB. Se convierte automáticamente a WebP."
+  hint = "Recomendado: 2000 x 1100 px, PNG/JPG/WebP o HEIC (iPhone), máximo 6 MB. Se convierte automáticamente a WebP y se optimiza."
 }: AdminHeroBannerProps) {
   const [slotStates, setSlots] = useState<Record<number, SlotState>>(() =>
     slots.reduce((accumulator, slot) => {
@@ -55,9 +54,9 @@ export function AdminHeroBanner({
     setMessage("");
     setIsError(false);
     if (!selectedFile) return;
-    if (!allowedTypes.includes(selectedFile.type)) {
+    if (!isSupportedImageFile(selectedFile)) {
       setIsError(true);
-      setMessage("Usá una imagen PNG, JPG o WebP.");
+      setMessage("Usá una imagen PNG, JPG, WebP o HEIC.");
       event.target.value = "";
       return;
     }
@@ -166,7 +165,7 @@ export function AdminHeroBanner({
                   <PackageCheck size={16} /> Elegir
                   <input
                     type="file"
-                    accept="image/png,image/jpeg,image/webp"
+                    accept="image/png,image/jpeg,image/webp,image/heic,image/heif"
                     onChange={(event) => selectFile(slot, event)}
                     className="sr-only"
                   />
@@ -206,22 +205,51 @@ export function AdminHeroBanner({
   );
 }
 
+const MAX_IMAGE_DIMENSION = 2000;
+const WEBP_QUALITY = 0.85;
+
+function isHeicFile(file: File): boolean {
+  return /^image\/hei[cf]$/i.test(file.type) || /\.hei[cf]$/i.test(file.name);
+}
+
+function isSupportedImageFile(file: File): boolean {
+  return /^image\/(png|jpeg|webp|heic|heif)$/i.test(file.type) || /\.(png|jpe?g|webp|heic|heif)$/i.test(file.name);
+}
+
+function fitWithinMaxDimension(width: number, height: number, maxDimension: number): { width: number; height: number } {
+  if (width <= maxDimension && height <= maxDimension) {
+    return { width, height };
+  }
+  const scale = maxDimension / Math.max(width, height);
+  return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
+}
+
 async function convertImageToWebp(file: File): Promise<File> {
-  const sourceUrl = URL.createObjectURL(file);
+  let sourceBlob: Blob = file;
+  let sourceUrl: string | null = null;
   try {
+    if (isHeicFile(file)) {
+      const { default: heic2any } = await import("heic2any");
+      const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
+      sourceBlob = Array.isArray(converted) ? converted[0] : converted;
+    }
+    sourceUrl = URL.createObjectURL(sourceBlob);
     const image = await loadImage(sourceUrl);
+    const { width, height } = fitWithinMaxDimension(image.naturalWidth, image.naturalHeight, MAX_IMAGE_DIMENSION);
     const canvas = document.createElement("canvas");
-    canvas.width = image.naturalWidth;
-    canvas.height = image.naturalHeight;
+    canvas.width = width;
+    canvas.height = height;
     const context = canvas.getContext("2d");
     if (!context) throw new Error("No se pudo inicializar el procesador de imágenes.");
-    context.drawImage(image, 0, 0);
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    context.drawImage(image, 0, 0, width, height);
 
-    const blob = await canvasToWebpBlob(canvas, 0.9);
+    const blob = await canvasToWebpBlob(canvas, WEBP_QUALITY);
     const baseName = file.name.replace(/\.[^.]+$/, "").trim() || "banner";
     return new File([blob], `${baseName}.webp`, { type: "image/webp", lastModified: Date.now() });
   } finally {
-    URL.revokeObjectURL(sourceUrl);
+    if (sourceUrl) URL.revokeObjectURL(sourceUrl);
   }
 }
 

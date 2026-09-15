@@ -1,8 +1,6 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@supabase/supabase-js";
 import type { Metadata } from "next";
-import Image from "next/image";
-import Link from "next/link";
 import { mapProductDetails, type ProductDetailsRow } from "@/data/products";
 import { site } from "@/data/site";
 import {
@@ -12,8 +10,10 @@ import {
   buildItemListSchema,
   productUrl
 } from "@/lib/seo";
-import { Container } from "@/components/ui/Container";
-import { CategoryProducts } from "@/components/products/CategoryProducts";
+import {
+  CategoryPageView,
+  type CategoryPageCategory
+} from "@/components/products/CategoryPageView";
 
 /** Descripciones editoriales por categoría conocida. */
 const CATEGORY_META: Record<string, { heading: string; description: string }> = {
@@ -79,6 +79,35 @@ async function fetchCategoryBySlug(slug: string) {
   return { category, products };
 }
 
+async function fetchCategories(): Promise<CategoryPageCategory[]> {
+  const client = getClient();
+  if (!client) return [];
+
+  const { data } = await client
+    .from("product_categories")
+    .select("name,slug,image_url")
+    .eq("is_active", true)
+    .order("name");
+
+  return (data ?? [])
+    .filter(
+      (row): row is { name: string; slug: string | null; image_url: string | null } =>
+        typeof row.name === "string"
+    )
+    .map((row) => {
+      const meta = CATEGORY_META[row.name];
+      return {
+        name: row.name,
+        slug: row.slug,
+        image_url: row.image_url,
+        heading: meta?.heading ?? row.name,
+        description:
+          meta?.description ??
+          `Explorá nuestra selección de ${row.name.toLowerCase()} en Mate Tierra.`
+      };
+    });
+}
+
 export async function generateStaticParams() {
   const client = getClient();
   if (!client) return [];
@@ -133,15 +162,13 @@ export default async function CategoryPage({
   params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
-  const data = await fetchCategoryBySlug(slug);
+  const [data, categories] = await Promise.all([
+    fetchCategoryBySlug(slug),
+    fetchCategories()
+  ]);
   if (!data) notFound();
 
   const { category, products } = data;
-  const meta = CATEGORY_META[category.name];
-  const heading = meta?.heading ?? category.name;
-  const description =
-    meta?.description ??
-    `Explorá nuestra selección de ${category.name.toLowerCase()} en Mate Tierra.`;
 
   const breadcrumbSchema = buildBreadcrumbSchema([
     { name: "Inicio", url: site.baseUrl },
@@ -163,65 +190,7 @@ export default async function CategoryPage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListSchema) }}
       />
 
-      <main>
-        {/* Hero de categoría */}
-        {category.image_url ? (
-          <div className="relative h-48 w-full overflow-hidden bg-secondary/30 sm:h-64">
-            <Image
-              src={category.image_url}
-              alt={`${category.name} — Mate Tierra`}
-              fill
-              sizes="100vw"
-              className="object-cover object-center"
-              priority
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-            <div className="absolute bottom-0 left-0 right-0 px-6 pb-6">
-              <Container>
-                <h1 className="font-serif text-4xl font-semibold text-white sm:text-5xl">{heading}</h1>
-              </Container>
-            </div>
-          </div>
-        ) : null}
-
-        <Container className="pb-24 pt-8">
-          {/* Breadcrumb */}
-          <nav aria-label="Ruta de navegación" className="mb-6 text-sm text-muted">
-            <ol className="flex flex-wrap items-center gap-1.5">
-              <li><Link href="/" className="transition-colors hover:text-primary">Inicio</Link></li>
-              <li aria-hidden="true">/</li>
-              <li><Link href="/productos" className="transition-colors hover:text-primary">Productos</Link></li>
-              <li aria-hidden="true">/</li>
-              <li className="font-medium text-text">{category.name}</li>
-            </ol>
-          </nav>
-
-          {/* H1 cuando no hay imagen hero */}
-          {!category.image_url ? (
-            <h1 className="mb-4 font-serif text-4xl font-semibold text-[#20341d] sm:text-5xl">{heading}</h1>
-          ) : null}
-
-          <p className="mb-2 max-w-2xl text-base leading-relaxed text-muted">{description}</p>
-          <p className="mb-10 text-xs font-bold uppercase tracking-widest text-primary">
-            {products.length} {products.length === 1 ? "producto" : "productos"}
-          </p>
-
-          {products.length > 0 ? (
-            <CategoryProducts products={products} />
-          ) : (
-            <p className="text-muted">No hay productos disponibles en esta categoría por el momento.</p>
-          )}
-
-          <div className="mt-12 border-t border-[#e7e2d8] pt-8">
-            <Link
-              href="/productos"
-              className="text-sm font-medium text-primary transition-colors hover:underline"
-            >
-              ← Ver todos los productos
-            </Link>
-          </div>
-        </Container>
-      </main>
+      <CategoryPageView categories={categories} initialCategoryName={category.name} />
     </>
   );
 }

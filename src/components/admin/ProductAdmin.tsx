@@ -556,23 +556,51 @@ function unitOptionsFor(value: string) {
 }
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_IMAGE_DIMENSION = 1600;
+const WEBP_QUALITY = 0.85;
+
+function isHeicFile(file: File): boolean {
+  return /^image\/hei[cf]$/i.test(file.type) || /\.hei[cf]$/i.test(file.name);
+}
+
+function isSupportedImageFile(file: File): boolean {
+  return /^image\/(png|jpeg|webp|heic|heif)$/i.test(file.type) || /\.(png|jpe?g|webp|heic|heif)$/i.test(file.name);
+}
+
+function fitWithinMaxDimension(width: number, height: number, maxDimension: number): { width: number; height: number } {
+  if (width <= maxDimension && height <= maxDimension) {
+    return { width, height };
+  }
+  const scale = maxDimension / Math.max(width, height);
+  return { width: Math.max(1, Math.round(width * scale)), height: Math.max(1, Math.round(height * scale)) };
+}
 
 async function convertImageToWebp(file: File): Promise<File> {
-  const sourceUrl = URL.createObjectURL(file);
+  let sourceBlob: Blob = file;
+  let sourceUrl: string | null = null;
   try {
+    if (isHeicFile(file)) {
+      const { default: heic2any } = await import("heic2any");
+      const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
+      sourceBlob = Array.isArray(converted) ? converted[0] : converted;
+    }
+    sourceUrl = URL.createObjectURL(sourceBlob);
     const image = await loadImage(sourceUrl);
+    const { width, height } = fitWithinMaxDimension(image.naturalWidth, image.naturalHeight, MAX_IMAGE_DIMENSION);
     const canvas = document.createElement("canvas");
-    canvas.width = image.naturalWidth;
-    canvas.height = image.naturalHeight;
+    canvas.width = width;
+    canvas.height = height;
     const context = canvas.getContext("2d");
     if (!context) throw new Error("No se pudo inicializar el procesador de imágenes.");
-    context.drawImage(image, 0, 0);
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = "high";
+    context.drawImage(image, 0, 0, width, height);
 
-    const blob = await canvasToWebpBlob(canvas, 0.9);
+    const blob = await canvasToWebpBlob(canvas, WEBP_QUALITY);
     const baseName = file.name.replace(/\.[^.]+$/, "").trim() || "imagen";
     return new File([blob], `${baseName}.webp`, { type: "image/webp", lastModified: Date.now() });
   } finally {
-    URL.revokeObjectURL(sourceUrl);
+    if (sourceUrl) URL.revokeObjectURL(sourceUrl);
   }
 }
 
@@ -616,8 +644,8 @@ function ProductImagePicker({ files, existingImages, onChange }: Readonly<{ file
       event.target.value = "";
       return;
     }
-    if (selected.some((file) => !["image/png", "image/jpeg", "image/webp"].includes(file.type))) {
-      setError("Usá fotos PNG, JPG o WebP.");
+    if (selected.some((file) => !isSupportedImageFile(file))) {
+      setError("Usá fotos PNG, JPG, WebP o HEIC.");
       event.target.value = "";
       return;
     }
@@ -656,9 +684,9 @@ function ProductImagePicker({ files, existingImages, onChange }: Readonly<{ file
             {index === 0 ? <span className="absolute bottom-1.5 left-1.5 bg-[#20341d] px-2 py-1 text-[10px] font-bold uppercase text-white">Principal</span> : null}
           </div>
         ))}
-        {files.length < 3 ? <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-2 border border-dashed border-[#aeb5aa] bg-[#fafaf7] text-center text-xs font-bold text-[#385133] hover:border-primary"><Plus size={22} /> Adjuntar fotos<input type="file" multiple accept="image/png,image/jpeg,image/webp" onChange={selectImages} className="sr-only" /></label> : null}
+        {files.length < 3 ? <label className="flex aspect-square cursor-pointer flex-col items-center justify-center gap-2 border border-dashed border-[#aeb5aa] bg-[#fafaf7] text-center text-xs font-bold text-[#385133] hover:border-primary"><Plus size={22} /> Adjuntar fotos<input type="file" multiple accept="image/png,image/jpeg,image/webp,image/heic,image/heif" onChange={selectImages} className="sr-only" /></label> : null}
       </div>
-      <p className="mt-2 text-xs text-muted">De 1 a 3 fotos. PNG, JPG o WebP, hasta 5 MB cada una. Se convierten automáticamente a WebP. La primera será la portada.</p>
+      <p className="mt-2 text-xs text-muted">De 1 a 3 fotos. PNG, JPG, WebP o HEIC (iPhone), hasta 5 MB cada una. Se convierten automáticamente a WebP y se optimizan para la web. La primera será la portada.</p>
       {error ? <p role="alert" className="mt-2 text-sm font-semibold text-red-700">{error}</p> : null}
     </fieldset>
   );

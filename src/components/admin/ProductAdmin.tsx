@@ -346,7 +346,7 @@ export function ProductAdmin() {
           <>
             <AdminBranding />
 
-            <AdminHeroBanner />
+            <AdminHeroBanner showVideoUpload />
 
             <AdminHeroBanner
               eyebrow="Promociones"

@@ -14,6 +14,9 @@ export const bannerPath = (slot: number) => `branding/hero-${slot}`;
 export const bannerUrl = (slot: number) =>
   `${supabaseUrl}/storage/v1/object/public/products/${bannerPath(slot)}`;
 
+export const heroVideoPath = "branding/hero-video";
+export const heroVideoUrl = `${supabaseUrl}/storage/v1/object/public/products/${heroVideoPath}`;
+
 async function exists(url: string) {
   try {
     const response = await fetch(url, { method: "HEAD" });
@@ -24,6 +27,7 @@ async function exists(url: string) {
 }
 
 const ROTATION_MS = 6000;
+const VIDEO_SLIDE_MS = 10000;
 
 const trustItems = [
   { icon: Truck, label: "Envios a todo el pais" },
@@ -31,8 +35,10 @@ const trustItems = [
   { icon: Leaf, label: "Seleccion artesanal" }
 ];
 
+type Slide = { type: "image" | "video"; src: string };
+
 export function HeroBanner() {
-  const [desktopSlides, setDesktopSlides] = useState<string[]>([]);
+  const [desktopSlides, setDesktopSlides] = useState<Slide[]>([]);
   const [mobileSlide, setMobileSlide] = useState<string | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
@@ -41,10 +47,20 @@ export function HeroBanner() {
     let active = true;
 
     // Banner 1 y 3 → desktop (carrusel); Banner 2 → mobile (imagen estática).
+    // Video → primer slide del carrusel, solo desktop.
     const stamp = Date.now();
-    Promise.all([1, 2, 3].map((slot) => exists(`${bannerUrl(slot)}?t=${stamp}`))).then(([url1, url2, url3]) => {
+    Promise.all([
+      exists(`${bannerUrl(1)}?t=${stamp}`),
+      exists(`${bannerUrl(2)}?t=${stamp}`),
+      exists(`${bannerUrl(3)}?t=${stamp}`),
+      exists(`${heroVideoUrl}?t=${stamp}`)
+    ]).then(([url1, url2, url3, video]) => {
       if (!active) return;
-      setDesktopSlides([url1, url3].filter((u): u is string => u !== null));
+      const slides: Slide[] = [];
+      if (video) slides.push({ type: "video", src: video });
+      if (url1) slides.push({ type: "image", src: url1 });
+      if (url3) slides.push({ type: "image", src: url3 });
+      setDesktopSlides(slides);
       setMobileSlide(url2);
     });
 
@@ -59,11 +75,12 @@ export function HeroBanner() {
 
   useEffect(() => {
     if (desktopSlides.length < 2) return;
-    const timer = window.setInterval(() => {
+    const isVideo = desktopSlides[activeIndex]?.type === "video";
+    const timer = window.setTimeout(() => {
       setActiveIndex((current) => (current + 1) % desktopSlides.length);
-    }, ROTATION_MS);
-    return () => window.clearInterval(timer);
-  }, [desktopSlides.length]);
+    }, isVideo ? VIDEO_SLIDE_MS : ROTATION_MS);
+    return () => window.clearTimeout(timer);
+  }, [activeIndex, desktopSlides]);
 
   const move = (direction: 1 | -1) => {
     setActiveIndex((current) => (current + direction + desktopSlides.length) % desktopSlides.length);
@@ -72,25 +89,36 @@ export function HeroBanner() {
   return (
     <section className="bg-background">
       <div className="relative h-[68vh] min-h-[440px] w-full overflow-hidden bg-secondary/40 sm:h-[74vh] sm:max-h-[760px]">
-        {/* Desktop: Banner 1 (+ Banner 3 como segundo slide) */}
+        {/* Desktop: video opcional + Banner 1 (+ Banner 3 como segundo slide) */}
         <AnimatePresence mode="sync">
           {desktopSlides[activeIndex] ? (
             <motion.div
-              key={desktopSlides[activeIndex]}
+              key={desktopSlides[activeIndex].src}
               initial={{ opacity: 0, scale: 1.05 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 1.1, ease: "easeInOut" }}
               className="absolute inset-0 hidden sm:block"
             >
-              <Image
-                src={desktopSlides[activeIndex]}
-                alt="Banner de la tienda"
-                fill
-                priority
-                sizes="100vw"
-                className="object-cover object-[50%_30%]"
-              />
+              {desktopSlides[activeIndex].type === "video" ? (
+                <video
+                  src={desktopSlides[activeIndex].src}
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  className="h-full w-full object-cover"
+                />
+              ) : (
+                <Image
+                  src={desktopSlides[activeIndex].src}
+                  alt="Banner de la tienda"
+                  fill
+                  priority
+                  sizes="100vw"
+                  className="object-cover object-[50%_30%]"
+                />
+              )}
             </motion.div>
           ) : null}
         </AnimatePresence>
@@ -152,10 +180,10 @@ export function HeroBanner() {
               <div className="absolute inset-x-0 bottom-5 flex justify-center gap-2">
                 {desktopSlides.map((slide, index) => (
                   <button
-                    key={slide}
+                    key={slide.src}
                     type="button"
                     onClick={() => setActiveIndex(index)}
-                    aria-label={`Ver imagen ${index + 1}`}
+                    aria-label={slide.type === "video" ? "Ver video" : `Ver imagen ${index + 1}`}
                     aria-current={index === activeIndex}
                     className={cn(
                       "h-1.5 rounded-full transition-all duration-300",

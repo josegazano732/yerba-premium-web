@@ -3,10 +3,12 @@
 import Image from "next/image";
 import { ChangeEvent, useState } from "react";
 import { Check, PackageCheck, Trash2 } from "lucide-react";
-import { bannerPath, bannerSlots, bannerUrl } from "@/components/home/HeroBanner";
+import { bannerPath, bannerSlots, bannerUrl, heroVideoPath, heroVideoUrl } from "@/components/home/HeroBanner";
 import { supabase } from "@/lib/supabase";
 
 const maxFileSize = 6 * 1024 * 1024;
+const maxVideoFileSize = 30 * 1024 * 1024;
+const maxVideoDurationSeconds = 10;
 
 type SlotState = {
   file: File | null;
@@ -23,6 +25,7 @@ type AdminHeroBannerProps = {
   urlFor?: (slot: number) => string;
   slotLabel?: string;
   hint?: string;
+  showVideoUpload?: boolean;
 };
 
 export function AdminHeroBanner({
@@ -33,7 +36,8 @@ export function AdminHeroBanner({
   pathFor = bannerPath,
   urlFor = bannerUrl,
   slotLabel = "Banner",
-  hint = "Recomendado: 2000 x 1100 px, PNG/JPG/WebP o HEIC (iPhone), máximo 6 MB. Se convierte automáticamente a WebP y se optimiza."
+  hint = "Recomendado: 2000 x 1100 px, PNG/JPG/WebP o HEIC (iPhone), máximo 6 MB. Se convierte automáticamente a WebP y se optimiza.",
+  showVideoUpload = false
 }: AdminHeroBannerProps) {
   const [slotStates, setSlots] = useState<Record<number, SlotState>>(() =>
     slots.reduce((accumulator, slot) => {
@@ -45,8 +49,89 @@ export function AdminHeroBanner({
   const [message, setMessage] = useState("");
   const [isError, setIsError] = useState(false);
 
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreview, setVideoPreview] = useState(`${heroVideoUrl}?t=${Date.now()}`);
+  const [videoUploading, setVideoUploading] = useState(false);
+  const [videoMissing, setVideoMissing] = useState(false);
+
   function updateSlot(slot: number, changes: Partial<SlotState>) {
     setSlots((current) => ({ ...current, [slot]: { ...current[slot], ...changes } }));
+  }
+
+  async function selectVideo(event: ChangeEvent<HTMLInputElement>) {
+    const selectedFile = event.target.files?.[0] ?? null;
+    setMessage("");
+    setIsError(false);
+    if (!selectedFile) return;
+    if (!isSupportedVideoFile(selectedFile)) {
+      setIsError(true);
+      setMessage("Usá un video MP4, WebM o MOV.");
+      event.target.value = "";
+      return;
+    }
+    if (selectedFile.size > maxVideoFileSize) {
+      setIsError(true);
+      setMessage("El video debe pesar menos de 30 MB.");
+      event.target.value = "";
+      return;
+    }
+    let duration: number;
+    try {
+      duration = await readVideoDuration(selectedFile);
+    } catch {
+      setIsError(true);
+      setMessage("No pudimos leer el video seleccionado.");
+      event.target.value = "";
+      return;
+    }
+    if (duration > maxVideoDurationSeconds) {
+      setIsError(true);
+      setMessage("El video no puede durar más de 10 segundos.");
+      event.target.value = "";
+      return;
+    }
+    setVideoMissing(false);
+    setVideoFile(selectedFile);
+    setVideoPreview(URL.createObjectURL(selectedFile));
+    event.target.value = "";
+  }
+
+  async function uploadVideo() {
+    if (!supabase || !videoFile) return;
+    setVideoUploading(true);
+    setMessage("");
+    setIsError(false);
+    const { error } = await supabase.storage.from("products").upload(heroVideoPath, videoFile, {
+      cacheControl: "0",
+      contentType: videoFile.type,
+      upsert: true
+    });
+    setVideoUploading(false);
+    if (error) {
+      setIsError(true);
+      setMessage(`No se pudo cargar el video: ${error.message}`);
+      return;
+    }
+    setVideoFile(null);
+    setVideoMissing(false);
+    setVideoPreview(`${heroVideoUrl}?t=${Date.now()}`);
+    setMessage("Video actualizado. Recargá el inicio para verlo.");
+  }
+
+  async function removeVideo() {
+    if (!supabase) return;
+    setVideoUploading(true);
+    const { error } = await supabase.storage.from("products").remove([heroVideoPath]);
+    setVideoUploading(false);
+    if (error) {
+      setIsError(true);
+      setMessage(`No se pudo quitar el video: ${error.message}`);
+      return;
+    }
+    setVideoFile(null);
+    setVideoMissing(true);
+    setIsError(false);
+    setMessage("Video eliminado.");
   }
 
   async function selectFile(slot: number, event: ChangeEvent<HTMLInputElement>) {
@@ -194,6 +279,56 @@ export function AdminHeroBanner({
         })}
       </div>
 
+      {showVideoUpload ? (
+        <div className="border-t border-[#e0e2dc] p-5">
+          <p className="text-xs font-bold uppercase tracking-[0.14em] text-muted">Video de fondo (solo escritorio)</p>
+          <p className="mt-1 max-w-2xl text-sm leading-6 text-muted">
+            Video opcional de hasta 10 segundos que se reproduce a pantalla completa arriba del inicio, solo en escritorio. En el celular se sigue mostrando la foto del banner.
+          </p>
+
+          <div className="mt-3 grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(240px,0.5fr)] md:items-center">
+            <div className="flex aspect-video items-center justify-center overflow-hidden border border-dashed border-[#c9cec4] bg-[#f7f6f1]">
+              {videoMissing ? (
+                <span className="px-4 text-center text-xs text-muted">Sin video cargado</span>
+              ) : (
+                <video src={videoPreview} muted playsInline controls className="h-full w-full object-cover" />
+              )}
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <label className="inline-flex h-10 cursor-pointer items-center gap-2 border border-[#bfc5ba] bg-white px-3 text-xs font-bold text-[#263324] transition hover:border-primary hover:bg-[#f5f7f1]">
+                <PackageCheck size={16} /> Elegir video
+                <input
+                  type="file"
+                  accept="video/mp4,video/webm,video/quicktime"
+                  onChange={(event) => void selectVideo(event)}
+                  className="sr-only"
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => void uploadVideo()}
+                disabled={!videoFile || videoUploading}
+                className="inline-flex h-10 items-center gap-2 bg-[#20341d] px-4 text-xs font-bold text-white disabled:cursor-not-allowed disabled:opacity-40"
+              >
+                <Check size={16} /> {videoUploading ? "Cargando..." : "Guardar"}
+              </button>
+              {!videoMissing && (
+                <button
+                  type="button"
+                  onClick={() => void removeVideo()}
+                  disabled={videoUploading}
+                  className="inline-flex h-10 items-center gap-2 border border-[#e3c9c9] px-3 text-xs font-bold text-red-700 transition hover:bg-red-50 disabled:opacity-40"
+                >
+                  <Trash2 size={16} /> Quitar
+                </button>
+              )}
+            </div>
+          </div>
+          <p className="mt-3 text-xs text-muted">MP4, WebM o MOV. Máximo 10 segundos y 30 MB.</p>
+        </div>
+      ) : null}
+
       {message ? (
         <p role="status" className={`px-5 pb-5 text-sm font-semibold ${isError ? "text-red-700" : "text-[#385133]"}`}>
           {message}
@@ -214,6 +349,25 @@ function isHeicFile(file: File): boolean {
 
 function isSupportedImageFile(file: File): boolean {
   return /^image\/(png|jpeg|webp|heic|heif)$/i.test(file.type) || /\.(png|jpe?g|webp|heic|heif)$/i.test(file.name);
+}
+
+function isSupportedVideoFile(file: File): boolean {
+  return /^video\/(mp4|webm|quicktime)$/i.test(file.type) || /\.(mp4|webm|mov)$/i.test(file.name);
+}
+
+async function readVideoDuration(file: File): Promise<number> {
+  const url = URL.createObjectURL(file);
+  try {
+    return await new Promise<number>((resolve, reject) => {
+      const video = document.createElement("video");
+      video.preload = "metadata";
+      video.onloadedmetadata = () => resolve(video.duration);
+      video.onerror = () => reject(new Error("No se pudo leer el video."));
+      video.src = url;
+    });
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 function fitWithinMaxDimension(width: number, height: number, maxDimension: number): { width: number; height: number } {

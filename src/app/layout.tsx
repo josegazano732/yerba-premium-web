@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
+import { Suspense } from "react";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
 import { Footer } from "@/components/layout/Footer";
 import { Header } from "@/components/layout/Header";
-import { WhatsappFab } from "@/components/layout/WhatsappFab";
-import { AiMatera } from "@/components/ai-matera/AiMatera";
+import { FloatingWidgets } from "@/components/layout/FloatingWidgets";
 import { CartProvider } from "@/lib/cart-context";
 import { Analytics } from "@vercel/analytics/next";
 import { site } from "@/data/site";
@@ -58,8 +58,9 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
           <div aria-hidden className="h-[7.5rem]" />
           {children}
           <Footer />
-          <WhatsappFab />
-          <AiMatera />
+          <Suspense fallback={null}>
+            <FloatingWidgets />
+          </Suspense>
           <Analytics />
         </CartProvider>
       </body>

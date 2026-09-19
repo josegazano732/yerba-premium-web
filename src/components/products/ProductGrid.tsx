@@ -92,6 +92,9 @@ export function ProductGrid({
   const [isLoading, setIsLoading] = useState(true);
   const [visibleCount, setVisibleCount] = useState(24);
   const [material, setMaterial] = useState("Todos");
+  const [subcategory, setSubcategory] = useState("Todos");
+  const [subcategories, setSubcategories] = useState<Array<{ id: string; category_id: string; name: string }>>([]);
+  const [expandedSubcategory, setExpandedSubcategory] = useState<string | null>(null);
   const [priceBracketId, setPriceBracketId] = useState<string | null>(null);
   const [priceBounds, setPriceBounds] = useState({ min: 0, max: 0 });
   const resultsRef = useRef<HTMLDivElement>(null);
@@ -99,11 +102,8 @@ export function ProductGrid({
 
   function handleCategorySelect(nextCategory: string) {
     setCategory(nextCategory);
+    setSubcategory("Todos");
     onCategoryChange?.(nextCategory);
-    setIsFilterOpen(false);
-    requestAnimationFrame(() => {
-      resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    });
   }
 
   useEffect(() => {
@@ -119,14 +119,28 @@ export function ProductGrid({
     }
 
     let active = true;
-    supabase
-      .from("product_details")
-      .select("id,name,description,price,image,image_urls,category_name,unit_of_measure,stock,seasonal")
-      .order("name")
-      .then(({ data, error }) => {
+
+    Promise.all([
+      supabase
+        .from("product_details")
+        .select("id,name,description,price,image,image_urls,category_name,unit_of_measure,stock,seasonal")
+        .order("name"),
+      supabase.from("products").select("id,subcategory_id,category_id"),
+      supabase
+        .from("product_subcategories")
+        .select("id,category_id,name")
+        .eq("is_active", true)
+        .order("display_order")
+        .order("name")
+    ])
+      .then(([productsResult, relationsResult, subcategoriesResult]) => {
         if (!active) return;
-        const remoteProducts = (data as ProductDetailsRow[] | null)?.map(mapProductDetails).filter((product): product is Product => product !== null) ?? [];
-        if (error || remoteProducts.length === 0) {
+        const data = productsResult.data as ProductDetailsRow[] | null;
+        const remoteProducts = (data ?? [])
+          .map(mapProductDetails)
+          .filter((product): product is Product => product !== null);
+
+        if (productsResult.error || remoteProducts.length === 0) {
           setCatalogProducts(fallbackProducts);
           setCatalogError(true);
           setIsLoading(false);
@@ -136,11 +150,35 @@ export function ProductGrid({
           });
           return;
         }
+
+        const nextSubcategories = (subcategoriesResult.data as Array<{ id: string; category_id: string; name: string }> | null) ?? [];
+        const subcategoryById = new Map(nextSubcategories.map((item) => [item.id, item]));
+        const relationRows = (relationsResult.data as Array<{ id: string; subcategory_id: string | null; category_id: string | null }> | null) ?? [];
+        const subcategoryIdByProduct = new Map(
+          relationRows.map((row) => [row.id, row.subcategory_id] as const)
+        );
+        const categoryIdByProduct = new Map(
+          relationRows.map((row) => [row.id, row.category_id] as const)
+        );
+
+        const enrichedProducts: Product[] = remoteProducts.map((product) => {
+          const subcategoryId = subcategoryIdByProduct.get(product.id);
+          const subcategory = subcategoryId ? subcategoryById.get(subcategoryId) : undefined;
+          return {
+            ...product,
+            categoryId: categoryIdByProduct.get(product.id) ?? undefined,
+            subcategoryId: subcategoryId ?? undefined,
+            subcategory: subcategory?.name
+          };
+        });
+
         startTransition(() => {
-          setCatalogProducts(remoteProducts);
+          setCatalogProducts(enrichedProducts);
+          setSubcategories(nextSubcategories);
           setIsLoading(false);
         });
-      });
+      })
+      .catch(() => undefined);
 
     fetchPriceBounds()
       .then((bounds) => {
@@ -154,6 +192,24 @@ export function ProductGrid({
   }, []);
 
   const categories = ["Todos", ...Array.from(new Set(catalogProducts.map((product) => product.category)))];
+
+  const categoryIdByName = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const product of catalogProducts) {
+      if (product.categoryId && !map.has(product.category)) map.set(product.category, product.categoryId);
+    }
+    return map;
+  }, [catalogProducts]);
+
+  const subcategoriesByCategoryId = useMemo(() => {
+    const map = new Map<string, string[]>();
+    for (const item of subcategories) {
+      const list = map.get(item.category_id) ?? [];
+      list.push(item.name);
+      map.set(item.category_id, list);
+    }
+    return map;
+  }, [subcategories]);
 
   const materials = useMemo(
     () => ["Todos", ...Array.from(new Set(catalogProducts.map((product) => deriveMaterial(product))))],
@@ -192,6 +248,7 @@ export function ProductGrid({
   const visibleProducts = catalogProducts
     .filter((product) => category === "Todos" || product.category === category)
     .filter((product) => material === "Todos" || deriveMaterial(product) === material)
+    .filter((product) => subcategory === "Todos" || product.subcategory === subcategory)
     .filter((product) => !activePriceBracket || matchesPriceBracket(product.price, activePriceBracket))
     .filter((product) => `${product.name} ${product.description}`.toLowerCase().includes(deferredQuery))
     .sort((first, second) => {
@@ -208,7 +265,7 @@ export function ProductGrid({
 
   useEffect(() => {
     setVisibleCount(24);
-  }, [category, deferredQuery, sort, material, priceBracketId]);
+  }, [category, deferredQuery, sort, material, subcategory, priceBracketId]);
 
   useEffect(() => {
     if (!isFilterOpen) return;
@@ -353,6 +410,17 @@ export function ProductGrid({
                 aria-label={`Quitar filtro ${material}`}
               >
                 {material}
+                <X size={15} />
+              </button>
+            ) : null}
+            {subcategory !== "Todos" ? (
+              <button
+                type="button"
+                onClick={() => setSubcategory("Todos")}
+                className="inline-flex h-11 items-center gap-2 rounded-full bg-[#20341d] px-4 text-sm font-bold text-white transition hover:bg-primary"
+                aria-label={`Quitar filtro ${subcategory}`}
+              >
+                {subcategory}
                 <X size={15} />
               </button>
             ) : null}
@@ -551,18 +619,52 @@ export function ProductGrid({
                 </button>
                 {openSections.categorias ? (
                   <ul className="mt-4 space-y-2.5">
-                    {categories.map((item) => (
-                      <li key={item}>
-                        <button
-                          type="button"
-                          onClick={() => handleCategorySelect(item)}
-                          aria-pressed={category === item}
-                          className={`text-left text-sm transition hover:text-[#d7e68c] ${category === item ? "font-bold text-[#d7e68c]" : "text-white/85"}`}
-                        >
-                          {item}
-                        </button>
-                      </li>
-                    ))}
+                    {categories.map((item) => {
+                      const categoryId = categoryIdByName.get(item);
+                      const options = categoryId ? (subcategoriesByCategoryId.get(categoryId) ?? []) : [];
+                      const isExpanded = expandedSubcategory === item;
+                      return (
+                        <li key={item}>
+                          <div className="flex items-center justify-between gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleCategorySelect(item)}
+                              aria-pressed={category === item}
+                              className={`text-left text-sm transition hover:text-[#d7e68c] ${category === item ? "font-bold text-[#d7e68c]" : "text-white/85"}`}
+                            >
+                              {item}
+                            </button>
+                            {options.length > 0 ? (
+                              <button
+                                type="button"
+                                onClick={() => setExpandedSubcategory((current) => (current === item ? null : item))}
+                                aria-expanded={isExpanded}
+                                aria-label={isExpanded ? `Ocultar subcategorías de ${item}` : `Ver subcategorías de ${item}`}
+                                className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-white/70 transition hover:bg-white/10 hover:text-[#d7e68c]"
+                              >
+                                {isExpanded ? <Minus size={14} /> : <Plus size={14} />}
+                              </button>
+                            ) : null}
+                          </div>
+                          {isExpanded && options.length > 0 ? (
+                            <ul className="mt-2.5 space-y-2 border-l border-white/15 pl-4">
+                              {["Todos", ...options].map((option) => (
+                                <li key={option}>
+                                  <button
+                                    type="button"
+                                    onClick={() => setSubcategory(option)}
+                                    aria-pressed={subcategory === option}
+                                    className={`text-left text-sm transition hover:text-[#d7e68c] ${subcategory === option ? "font-bold text-[#d7e68c]" : "text-white/70"}`}
+                                  >
+                                    {option}
+                                  </button>
+                                </li>
+                              ))}
+                            </ul>
+                          ) : null}
+                        </li>
+                      );
+                    })}
                   </ul>
                 ) : null}
               </div>
@@ -637,13 +739,15 @@ export function ProductGrid({
               </div>
 
               <div className="mt-10 flex flex-col gap-3">
-                <button type="button" onClick={() => setIsFilterOpen(false)} className="h-11 rounded-full bg-[#d7e68c] text-sm font-bold text-[#20341d] transition hover:bg-white">
+                <button type="button" onClick={() => { setIsFilterOpen(false); requestAnimationFrame(() => { resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }); }); }} className="h-11 rounded-full bg-[#d7e68c] text-sm font-bold text-[#20341d] transition hover:bg-white">
                   Ver {visibleProducts.length} productos
                 </button>
                 <button
                   type="button"
                   onClick={() => {
                     setCategory("Todos");
+                    setSubcategory("Todos");
+                    setExpandedSubcategory(null);
                     setMaterial("Todos");
                     setPriceBracketId(null);
                     setSort("featured");

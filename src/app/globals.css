@@ -81,6 +81,12 @@ body[data-cart-open="true"] #ai-matera-fab {
   display: none;
 }
 
+/* El checkout mantiene una interfaz enfocada, incluso antes de hidratar el pathname. */
+body:has(.checkout-page) #whatsapp-fab,
+body:has(.checkout-page) #ai-matera-fab {
+  display: none;
+}
+
 ::selection {
   background: var(--secondary);
   color: var(--text);

@@ -193,7 +193,7 @@ export function CheckoutForm() {
 
   if (cart.length === 0) {
     return (
-      <div className="mx-auto max-w-xl px-5 py-24 text-center">
+      <div className="mx-4 my-6 max-w-xl rounded-2xl border border-[#e2ddd3] bg-white px-5 py-16 text-center shadow-[0_18px_50px_-36px_rgba(32,52,29,0.45)] sm:mx-auto sm:my-10 sm:py-24">
         <ShoppingBag className="mx-auto text-primary" size={40} />
         <h2 className="mt-6 font-serif text-3xl font-semibold text-[#20341d]">Tu carrito está vacío</h2>
         <p className="mt-3 text-sm leading-6 text-muted">
@@ -210,16 +210,16 @@ export function CheckoutForm() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-5 pb-40 pt-10 sm:pb-44 sm:pt-14 lg:pb-14">
-      <h1 className="font-serif text-3xl font-semibold uppercase tracking-[0.06em] text-[#20341d] sm:text-4xl">
+    <div className="mx-auto max-w-6xl px-4 pb-32 pt-6 sm:px-0 sm:pb-36 sm:pt-8 lg:pb-14">
+      <h1 className="font-serif text-[1.75rem] font-semibold uppercase leading-tight tracking-[0.045em] text-[#20341d] sm:text-4xl sm:tracking-[0.06em]">
         Finalizar compra
       </h1>
-      <p className="mt-2 text-sm text-muted">Completá tus datos y elegí el envío para pagar con Mercado Pago.</p>
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">Completá tus datos y elegí el envío para pagar con Mercado Pago.</p>
 
-      <form id="checkout-form" noValidate onSubmit={handleSubmit(onSubmit, onInvalid)} className="mt-10 grid gap-10 lg:grid-cols-[1fr_24rem]">
-        <div className="space-y-8">
+      <form id="checkout-form" noValidate onSubmit={handleSubmit(onSubmit, onInvalid)} className="mt-7 grid gap-6 sm:mt-10 sm:gap-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-10">
+        <div className="space-y-5 sm:space-y-6">
           {/* Datos del cliente */}
-          <section>
+          <section className="rounded-xl border border-[#e2ddd3] bg-white p-4 shadow-[0_14px_40px_-34px_rgba(32,52,29,0.4)] sm:p-6">
             <h2 className="flex items-center gap-2.5 font-serif text-xl font-semibold text-[#20341d]">
               <span className="inline-grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary">1</span>
               Tus datos
@@ -244,7 +244,7 @@ export function CheckoutForm() {
           </section>
 
           {/* Envío */}
-          <section>
+          <section className="rounded-xl border border-[#e2ddd3] bg-white p-4 shadow-[0_14px_40px_-34px_rgba(32,52,29,0.4)] sm:p-6">
             <h2 className="flex items-center gap-2.5 font-serif text-xl font-semibold text-[#20341d]">
               <span className="inline-grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary">2</span>
               Envío
@@ -310,9 +310,9 @@ export function CheckoutForm() {
                           className="mt-1 accent-[#20341d]"
                         />
                         <span className="min-w-0 flex-1">
-                          <span className="flex items-center justify-between gap-3">
+                          <span className="flex items-start justify-between gap-2">
                             <span className="text-sm font-semibold text-[#20341d]">{quote.label}</span>
-                            <span className="text-sm font-bold text-[#20341d]">{quote.price === 0 ? "A confirmar" : formatCurrency.format(quote.price)}</span>
+                            <span className="shrink-0 text-right text-sm font-bold text-[#20341d]">{quote.price === 0 ? "A confirmar" : formatCurrency.format(quote.price)}</span>
                           </span>
                           <span className="mt-1 block text-xs leading-5 text-muted">{quote.description} · {quote.eta}</span>
                         </span>
@@ -327,7 +327,7 @@ export function CheckoutForm() {
         </div>
 
         {/* Resumen del pedido */}
-        <aside className="h-fit rounded-[10px] border border-[#e2ddd3] bg-white p-6 lg:sticky lg:top-32">
+        <aside className="h-fit rounded-xl border border-[#e2ddd3] bg-white p-4 shadow-[0_14px_40px_-34px_rgba(32,52,29,0.4)] sm:p-6 lg:sticky lg:top-32">
           <h2 className="flex items-center gap-2.5 font-serif text-xl font-semibold text-[#20341d]">
             <span className="inline-grid h-7 w-7 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-bold text-primary">3</span>
             Resumen
@@ -342,7 +342,7 @@ export function CheckoutForm() {
                   <p className="truncate text-sm font-semibold text-[#20341d]">{cartItemName(item)}</p>
                   <p className="text-xs text-muted">{item.quantity} x {formatCurrency.format(cartItemUnitPrice(item))}</p>
                 </div>
-                <strong className="text-sm text-[#20341d]">{formatCurrency.format(cartItemLineTotal(item))}</strong>
+                <strong className="shrink-0 text-sm text-[#20341d]">{formatCurrency.format(cartItemLineTotal(item))}</strong>
               </li>
             ))}
           </ul>
@@ -384,10 +384,10 @@ export function CheckoutForm() {
 
       {/* Barra fija de pago (solo móvil) */}
       <div
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-[#e2ddd3] bg-white/95 px-4 backdrop-blur lg:hidden"
+        className="fixed inset-x-0 bottom-0 z-40 border-t border-[#d7d2c7] bg-white/95 px-3 shadow-[0_-12px_30px_-22px_rgba(32,52,29,0.5)] backdrop-blur lg:hidden sm:px-6"
         style={{ paddingBottom: "max(0.75rem, env(safe-area-inset-bottom))" }}
       >
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 py-3">
+        <div className="mx-auto flex max-w-6xl items-center justify-between gap-2 py-3 sm:gap-4">
           <div className="min-w-0">
             <p className="text-[11px] font-bold uppercase tracking-wide text-muted">Total</p>
             <p className="truncate font-serif text-xl font-semibold text-[#20341d]">{formatCurrency.format(total)}</p>
@@ -396,7 +396,7 @@ export function CheckoutForm() {
             type="submit"
             form="checkout-form"
             disabled={submitting}
-            className="flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-cta px-6 text-sm font-bold text-white transition hover:bg-cta-hover focus:outline-none focus:ring-2 focus:ring-cta focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex h-12 shrink-0 items-center justify-center gap-2 rounded-full bg-cta px-4 text-sm font-bold text-white transition hover:bg-cta-hover focus:outline-none focus:ring-2 focus:ring-cta focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 sm:px-6"
           >
             {submitting ? <LoaderCircle size={18} className="animate-spin" /> : <Lock size={18} />}
             {submitting ? "Creando…" : "Pagar"}

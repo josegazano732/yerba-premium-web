@@ -13,8 +13,8 @@ export const metadata: Metadata = {
 
 export default function CheckoutPage() {
   return (
-    <main className="pb-24">
-      <Container className="pt-8 sm:pt-12">
+    <main className="checkout-page min-h-screen bg-[linear-gradient(180deg,rgba(216,196,166,0.16),transparent_22rem)] pb-16 sm:pb-24">
+      <Container className="px-0 pt-4 sm:px-6 sm:pt-10 lg:px-8">
         <CheckoutForm />
       </Container>
     </main>

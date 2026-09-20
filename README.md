@@ -40,6 +40,8 @@ npm run lint      # ESLint
 | `NEXT_PUBLIC_SUPABASE_URL` | URL del proyecto Supabase (productos, branding, stores) |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Clave anónima de Supabase |
 | `DEEPSEEK_API_KEY` | Clave para el asistente de IA (`src/lib/ai`) |
+| `NEXT_PUBLIC_GOOGLE_MAPS_API_KEY` | API key pública y restringida para Google Maps Locator Plus |
+| `NEXT_PUBLIC_GOOGLE_MAPS_MAP_ID` | Map ID opcional de Google Maps |
 | `NEXT_PUBLIC_BASE_PATH` | Base path (autogenerado en GitHub Pages) |
 
 ## Estructura

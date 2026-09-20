@@ -11,6 +11,11 @@ import { useCatalog } from "@/lib/useCatalog";
 /** Categorías núcleo con acceso directo desde la home. */
 const CORE_CATEGORIES = ["Mates", "Termos", "Bombillas", "Materas"];
 
+const PREFERRED_CATEGORY_PRODUCTS: Partial<Record<(typeof CORE_CATEGORIES)[number], string>> = {
+  Mates: "CUERO CRUDO TORPEDO",
+  Termos: "TERMO MEDIA MANIJA 1L"
+};
+
 const CATEGORY_ICONS: Record<string, LucideIcon> = {
   mates: Coffee,
   termos: FlaskConical,
@@ -28,7 +33,7 @@ function normalize(value: string) {
 }
 
 export function CategoryQuickLinks() {
-  const { products, categories } = useCatalog();
+  const { products } = useCatalog();
 
   const counts = products.reduce<Record<string, number>>((accumulator, product) => {
     accumulator[product.category] = (accumulator[product.category] ?? 0) + 1;
@@ -36,11 +41,20 @@ export function CategoryQuickLinks() {
   }, {});
 
   const cards = CORE_CATEGORIES.map((name) => {
-    const category = categories.find((item) => item.name === name);
+    const preferredProductName = PREFERRED_CATEGORY_PRODUCTS[name];
+    const categoryProduct =
+      products.find(
+        (product) =>
+          product.category === name &&
+          preferredProductName &&
+          normalize(product.name) === normalize(preferredProductName)
+      ) ??
+      products.find((product) => product.category === name);
+
     return {
       name,
       href: categoryUrl(name),
-      image: category?.image_url ?? "",
+      image: categoryProduct?.image ?? "",
       count: counts[name] ?? 0
     };
   });

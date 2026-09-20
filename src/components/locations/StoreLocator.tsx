@@ -5,7 +5,8 @@ import Image from "next/image";
 import { useMemo, useState } from "react";
 import { Container } from "@/components/ui/Container";
 import { Input } from "@/components/ui/Input";
-import { mainStoreMapEmbed, mainStoreMapLink, stores } from "@/data/stores";
+import { mainStoreMapLink, stores } from "@/data/stores";
+import { GoogleStoreLocator } from "./GoogleStoreLocator";
 
 const remoteLogo = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/storage/v1/object/public/products/branding/site-logo`;
 
@@ -63,15 +64,7 @@ export function StoreLocator() {
           </div>
 
           <div className="relative min-h-[420px] overflow-hidden rounded-[8px] border border-primary/15 shadow-sm">
-            <iframe
-              src={mainStoreMapEmbed}
-              title="Ubicaci\u00f3n de Mate Tierra"
-              className="h-full w-full border-0"
-              style={{ minHeight: "420px" }}
-              allowFullScreen
-              loading="lazy"
-              referrerPolicy="no-referrer-when-downgrade"
-            />
+            <GoogleStoreLocator />
             <a
               href={mainStoreMapLink}
               target="_blank"

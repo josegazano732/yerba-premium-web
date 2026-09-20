@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
 import { Container } from "@/components/ui/Container";
+import { useCatalog } from "@/lib/useCatalog";
 import { ProductGrid } from "./ProductGrid";
 
 export type CategoryPageCategory = {
@@ -31,8 +32,9 @@ export function CategoryPageView({
   initialCategoryName: string;
 }) {
   const [activeName, setActiveName] = useState(initialCategoryName);
+  const { categories: liveCategories } = useCatalog();
 
-  const active =
+  const configuredCategory =
     activeName === "Todos"
       ? ALL_CATEGORIES
       : categories.find((category) => category.name === activeName) ?? {
@@ -42,6 +44,10 @@ export function CategoryPageView({
           heading: activeName,
           description: `Explorá nuestra selección de ${activeName.toLowerCase()} en Mate Tierra.`
         };
+  const liveCategory = liveCategories.find((category) => category.name === activeName);
+  const active = liveCategory
+    ? { ...configuredCategory, image_url: liveCategory.image_url }
+    : configuredCategory;
 
   return (
     <main>

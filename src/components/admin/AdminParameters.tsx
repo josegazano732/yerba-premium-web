@@ -1,8 +1,10 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
-import { Check, Eye, Plus, X } from "lucide-react";
+import Image from "next/image";
+import { ChangeEvent, FormEvent, useEffect, useState } from "react";
+import { Check, Eye, PackageCheck, Plus, X } from "lucide-react";
 import { ENV_DEFAULT_STORE_CONFIG, STORE_FEATURE_KEYS, parseBooleanFlag } from "@/config/store";
+import { convertImageToWebp, IMAGE_FILE_ACCEPT, isSupportedImageFile, MAX_IMAGE_BYTES } from "@/lib/client-images";
 import { supabase } from "@/lib/supabase";
 import { DEFAULT_MARGIN_PROFILES, normalizeMarginPercentage, slugifyCatalog, type WholesaleMarginProfile } from "@/lib/wholesale";
 
@@ -10,6 +12,7 @@ type ProductCategory = {
   id: string;
   name: string;
   slug: string | null;
+  image_url: string | null;
   is_active: boolean | null;
   display_order: number | null;
 };
@@ -51,6 +54,7 @@ export function AdminParameters({ onCategoriesChanged }: Readonly<AdminParameter
   const [subcategoryDisplayOrder, setSubcategoryDisplayOrder] = useState("1");
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingCategory, setIsSavingCategory] = useState(false);
+  const [uploadingCategoryId, setUploadingCategoryId] = useState<string | null>(null);
   const [isSavingSubcategory, setIsSavingSubcategory] = useState(false);
   const [isSavingMargins, setIsSavingMargins] = useState(false);
   const [kitBuilder3DEnabled, setKitBuilder3DEnabled] = useState(ENV_DEFAULT_STORE_CONFIG.features.kitBuilder3D);
@@ -80,7 +84,7 @@ export function AdminParameters({ onCategoriesChanged }: Readonly<AdminParameter
     const [categoriesResult, subcategoriesResult, marginsResult, kitBuilderSettingResult] = await Promise.all([
       supabase
         .from("product_categories")
-        .select("id,name,slug,is_active,display_order")
+        .select("id,name,slug,image_url,is_active,display_order")
         .order("display_order", { ascending: true })
         .order("name", { ascending: true }),
       supabase
@@ -316,6 +320,80 @@ export function AdminParameters({ onCategoriesChanged }: Readonly<AdminParameter
     if (onCategoriesChanged) await onCategoriesChanged();
   }
 
+  async function updateCategoryBanner(category: ProductCategory, event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0] ?? null;
+    event.target.value = "";
+    if (!supabase || !file) return;
+
+    setMessage("");
+    setIsError(false);
+
+    if (!isSupportedImageFile(file)) {
+      setIsError(true);
+      setMessage("Usá una imagen PNG, JPG, WebP o HEIC para el banner.");
+      return;
+    }
+    if (file.size > MAX_IMAGE_BYTES) {
+      setIsError(true);
+      setMessage("La imagen del banner debe pesar menos de 5 MB.");
+      return;
+    }
+
+    setUploadingCategoryId(category.id);
+
+    let convertedFile: File;
+    try {
+      convertedFile = await convertImageToWebp(file);
+    } catch (error) {
+      setUploadingCategoryId(null);
+      setIsError(true);
+      setMessage(error instanceof Error ? error.message : "No se pudo procesar la imagen del banner.");
+      return;
+    }
+
+    if (convertedFile.size > MAX_IMAGE_BYTES) {
+      setUploadingCategoryId(null);
+      setIsError(true);
+      setMessage("Luego de convertir a WebP, la imagen debe pesar menos de 5 MB.");
+      return;
+    }
+
+    const path = `categories/${category.id}/banner.webp`;
+    const uploadResult = await supabase.storage.from("products").upload(path, convertedFile, {
+      cacheControl: "0",
+      contentType: "image/webp",
+      upsert: true
+    });
+
+    if (uploadResult.error) {
+      setUploadingCategoryId(null);
+      setIsError(true);
+      setMessage(`No se pudo cargar el banner: ${uploadResult.error.message}`);
+      return;
+    }
+
+    const publicUrl = supabase.storage.from("products").getPublicUrl(path).data.publicUrl;
+    const imageUrl = `${publicUrl}?v=${Date.now()}`;
+    const { error } = await supabase
+      .from("product_categories")
+      .update({ image_url: imageUrl })
+      .eq("id", category.id);
+
+    setUploadingCategoryId(null);
+
+    if (error) {
+      setIsError(true);
+      setMessage(`El banner se cargó, pero no se pudo asociar a la categoría: ${error.message}`);
+      return;
+    }
+
+    setCategories((current) =>
+      current.map((item) => item.id === category.id ? { ...item, image_url: imageUrl } : item)
+    );
+    setMessage(`Banner de ${category.name} actualizado correctamente.`);
+    if (onCategoriesChanged) await onCategoriesChanged();
+  }
+
   async function saveMarginProfiles() {
     if (!supabase) return;
     setIsSavingMargins(true);
@@ -431,10 +509,14 @@ export function AdminParameters({ onCategoriesChanged }: Readonly<AdminParameter
             </button>
           </form>
 
-          <div className="mt-5 overflow-x-auto">
-            <table className="w-full min-w-[320px] text-left text-xs">
+          <p className="mt-5 text-xs leading-5 text-muted">
+            Cargá una imagen apaisada por categoría. Se mostrará como banner con degradado en su página.
+          </p>
+          <div className="mt-3 overflow-x-auto">
+            <table className="w-full min-w-[520px] text-left text-xs">
               <thead className="bg-[#f5f4ef] text-muted">
                 <tr>
+                  <th className="px-2 py-2">Banner</th>
                   <th className="px-2 py-2">Categoria</th>
                   <th className="px-2 py-2">Slug</th>
                   <th className="px-2 py-2">Estado</th>
@@ -443,6 +525,37 @@ export function AdminParameters({ onCategoriesChanged }: Readonly<AdminParameter
               <tbody className="divide-y divide-[#ecefe7]">
                 {categories.map((category) => (
                   <tr key={category.id}>
+                    <td className="px-2 py-2">
+                      <label className="group relative block h-16 w-28 cursor-pointer overflow-hidden border border-[#d7d9d2] bg-[#f5f4ef] focus-within:ring-2 focus-within:ring-accent">
+                        {category.image_url ? (
+                          <>
+                            <Image
+                              src={category.image_url}
+                              alt={`Banner de ${category.name}`}
+                              fill
+                              sizes="112px"
+                              className="object-cover"
+                            />
+                            <span className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
+                          </>
+                        ) : (
+                          <span className="absolute inset-0 grid place-items-center text-muted">
+                            <PackageCheck size={20} />
+                          </span>
+                        )}
+                        <span className="absolute inset-x-0 bottom-0 bg-black/55 px-1 py-1 text-center text-[9px] font-bold uppercase text-white">
+                          {uploadingCategoryId === category.id ? "Cargando..." : category.image_url ? "Cambiar" : "Cargar"}
+                        </span>
+                        <input
+                          type="file"
+                          accept={IMAGE_FILE_ACCEPT}
+                          disabled={uploadingCategoryId !== null}
+                          onChange={(event) => void updateCategoryBanner(category, event)}
+                          aria-label={`Cargar banner de ${category.name}`}
+                          className="sr-only"
+                        />
+                      </label>
+                    </td>
                     <td className="px-2 py-2 font-semibold text-[#1d2d1a]">{category.name}</td>
                     <td className="px-2 py-2 text-muted">{category.slug ?? "-"}</td>
                     <td className="px-2 py-2 text-muted">{category.is_active ? "Activa" : "Inactiva"}</td>

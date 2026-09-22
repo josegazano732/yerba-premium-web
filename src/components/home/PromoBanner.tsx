@@ -75,7 +75,7 @@ export function PromoBanner() {
               alt="Mate y termo de Mate Tierra personalizados con un sticker premium aplicado"
               fill
               sizes="(max-width: 768px) 100vw, 50vw"
-              className="object-contain object-center p-3 sm:p-4"
+              className="object-cover object-[52%_center]"
             />
             <div
               aria-hidden="true"

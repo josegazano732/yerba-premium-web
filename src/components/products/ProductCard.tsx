@@ -18,14 +18,23 @@ type ProductCardProps = {
   product: Product;
   onAdd?: (product: Product) => void;
   onSelect?: (product: Product) => void;
+  imageFormat?: "landscape" | "standard" | "portrait";
 };
 
-export function ProductCard({ product, onAdd, onSelect }: Readonly<ProductCardProps>) {
+const imageFormatClasses = {
+  landscape: "aspect-[4/3.35]",
+  standard: "aspect-[4/4.3]",
+  portrait: "aspect-[4/5.15]"
+} as const;
+
+export function ProductCard({ product, onAdd, onSelect, imageFormat = "standard" }: Readonly<ProductCardProps>) {
   const secondaryImage = product.images && product.images.length > 1 ? product.images[1] : null;
 
   const cardInner = (
     <>
-      <div className="relative aspect-[4/4.3] overflow-hidden rounded-[6px] bg-secondary/35 shadow-[0_6px_16px_rgba(37,48,27,0.08)] ring-1 ring-[#e3ddcf]">
+      <div
+        className={`relative overflow-hidden rounded-[6px] bg-secondary/35 shadow-[0_6px_16px_rgba(37,48,27,0.08)] ring-1 ring-[#e3ddcf] ${imageFormatClasses[imageFormat]}`}
+      >
         <Image
           src={product.image}
           alt={`${product.name} — ${product.category}`}
@@ -68,7 +77,7 @@ export function ProductCard({ product, onAdd, onSelect }: Readonly<ProductCardPr
     <motion.article
       whileHover={{ y: -5 }}
       transition={{ duration: 0.25 }}
-      className="group flex h-full flex-col rounded-[8px] border border-[#d9d4c8] bg-[#fffdf8] p-2 shadow-[0_10px_35px_rgba(37,48,27,0.06)] transition hover:border-primary/30 hover:shadow-[0_18px_45px_rgba(37,48,27,0.12)]"
+      className="group flex flex-col rounded-[8px] border border-[#d9d4c8] bg-[#fffdf8] p-2 shadow-[0_10px_35px_rgba(37,48,27,0.06)] transition hover:border-primary/30 hover:shadow-[0_18px_45px_rgba(37,48,27,0.12)]"
     >
       {onSelect ? (
         <button

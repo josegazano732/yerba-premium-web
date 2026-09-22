@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useMemo } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Container } from "@/components/ui/Container";
@@ -11,7 +10,20 @@ import { ProductCard } from "./ProductCard";
 
 const FEATURED_PRIORITY = ["Mates", "Termos", "Bombillas", "Materas"];
 const EXCLUDED_CATEGORY_KEYWORDS = ["pequen", "combo", "hierba"];
-const AUTOPLAY_MS = 5000;
+const EDITORIAL_FORMATS = [
+  "portrait",
+  "landscape",
+  "standard",
+  "portrait",
+  "landscape",
+  "portrait",
+  "landscape",
+  "standard",
+  "standard",
+  "landscape",
+  "portrait",
+  "landscape"
+] as const;
 
 /** Compara sin acentos ni mayusculas para tolerar variantes de nombre en el catalogo. */
 function isExcludedCategory(category: string) {
@@ -25,8 +37,6 @@ function isExcludedCategory(category: string) {
 
 export function FeaturedProducts() {
   const { products, isLoading } = useCatalog();
-  const trackRef = useRef<HTMLDivElement>(null);
-  const [isPaused, setIsPaused] = useState(false);
 
   const selection = useMemo<Product[]>(() => {
     const allowed = products.filter((product) => !isExcludedCategory(product.category));
@@ -52,93 +62,50 @@ export function FeaturedProducts() {
       if (used >= 3) continue;
       perCategory.set(product.category, used + 1);
       selected.push(product);
-      if (selected.length === 10) break;
+      if (selected.length === 12) break;
     }
 
     return selected;
   }, [products]);
 
-  useEffect(() => {
-    if (isPaused || selection.length < 3) return;
-
-    const timer = window.setInterval(() => {
-      const track = trackRef.current;
-      if (!track) return;
-      const card = track.firstElementChild as HTMLElement | null;
-      const step = card ? card.offsetWidth + 16 : track.clientWidth * 0.8;
-
-      if (track.scrollLeft + track.clientWidth >= track.scrollWidth - 8) {
-        track.scrollTo({ left: 0, behavior: "smooth" });
-        return;
-      }
-
-      track.scrollBy({ left: step, behavior: "smooth" });
-    }, AUTOPLAY_MS);
-
-    return () => window.clearInterval(timer);
-  }, [isPaused, selection.length]);
-
-  const scrollByCard = (direction: 1 | -1) => {
-    const track = trackRef.current;
-    if (!track) return;
-    const card = track.firstElementChild as HTMLElement | null;
-    const step = card ? card.offsetWidth + 16 : track.clientWidth * 0.8;
-    track.scrollBy({ left: step * direction, behavior: "smooth" });
-  };
-
   return (
-    <section className="section-pad bg-white/60">
+    <section className="section-pad bg-white/60" aria-labelledby="featured-products-title">
       <Container>
-        <div className="relative">
-          <div className="mx-auto max-w-xl text-center">
-            <Badge>Los mas elegidos</Badge>
-            <h2 className="mt-4 font-serif text-3xl text-[#20341d] sm:text-4xl">Favoritos de la comunidad matera</h2>
-          </div>
-
-          <div className="absolute right-0 top-1/2 hidden -translate-y-1/2 items-center gap-3 lg:flex">
-            <button
-              type="button"
-              onClick={() => scrollByCard(-1)}
-              aria-label="Ver productos anteriores"
-              className="grid h-11 w-11 place-items-center rounded-full bg-white text-primary ring-1 ring-primary/15 transition hover:bg-secondary/40 focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </button>
-            <button
-              type="button"
-              onClick={() => scrollByCard(1)}
-              aria-label="Ver productos siguientes"
-              className="grid h-11 w-11 place-items-center rounded-full bg-white text-primary ring-1 ring-primary/15 transition hover:bg-secondary/40 focus:outline-none focus:ring-2 focus:ring-accent"
-            >
-              <ChevronRight className="h-5 w-5" />
-            </button>
-          </div>
+        <div className="mx-auto max-w-2xl text-center">
+          <Badge>Los mas elegidos</Badge>
+          <h2 id="featured-products-title" className="mt-4 font-serif text-3xl text-[#20341d] sm:text-4xl">
+            Favoritos de la comunidad matera
+          </h2>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-muted sm:text-base">
+            Una selección pensada para acompañar cada momento del ritual matero.
+          </p>
         </div>
 
-        <div
-          ref={trackRef}
-          onMouseEnter={() => setIsPaused(true)}
-          onMouseLeave={() => setIsPaused(false)}
-          onFocusCapture={() => setIsPaused(true)}
-          onBlurCapture={() => setIsPaused(false)}
-          className="no-scrollbar mt-8 max-w-full min-w-0 [contain:inline-size] flex snap-x snap-mandatory gap-4 overflow-x-auto scroll-smooth px-1 pb-2 sm:mt-10 sm:px-0"
-          style={{ contain: "layout paint" }}
-        >
+        <div className="mt-9 grid grid-cols-1 items-start gap-x-5 gap-y-7 pb-8 sm:mt-11 sm:grid-cols-2 sm:gap-y-9 lg:grid-cols-3 xl:grid-cols-4 xl:gap-y-12 xl:pb-14">
           {isLoading
-            ? Array.from({ length: 4 }).map((_, index) => (
+            ? Array.from({ length: 12 }).map((_, index) => (
                 <div
                   key={index}
-                  className="h-[24rem] w-[82vw] max-w-[20rem] shrink-0 animate-pulse snap-start rounded-[8px] bg-secondary/40 sm:h-[26rem] sm:w-[18rem] sm:max-w-none"
+                  className={`animate-pulse rounded-[8px] border border-primary/5 bg-secondary/30 ${
+                    EDITORIAL_FORMATS[index] === "portrait"
+                      ? "aspect-[4/6.9]"
+                      : EDITORIAL_FORMATS[index] === "landscape"
+                        ? "aspect-[4/5.1]"
+                        : "aspect-[4/6]"
+                  } ${index % 4 === 1 || index % 4 === 3 ? "xl:translate-y-10" : ""}`}
                 />
               ))
-            : selection.map((product) => (
-                <div key={product.id} className="w-[82vw] max-w-[20rem] shrink-0 snap-start sm:w-[18rem] sm:max-w-none">
-                  <ProductCard product={product} />
+            : selection.map((product, index) => (
+                <div
+                  key={product.id}
+                  className={index % 4 === 1 || index % 4 === 3 ? "xl:translate-y-10" : undefined}
+                >
+                  <ProductCard product={product} imageFormat={EDITORIAL_FORMATS[index]} />
                 </div>
               ))}
         </div>
 
-        <div className="mt-10 flex justify-center">
+        <div className="mt-4 flex justify-center sm:mt-8">
           <Button href="/productos" className="px-7 py-3 text-base">
             {products.length > 0 ? `Ver los ${products.length} productos` : "Ver todo el catalogo"}
           </Button>

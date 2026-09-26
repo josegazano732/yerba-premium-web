@@ -8,6 +8,7 @@ export type CatalogPdfItem = {
   description?: string;
   priceCaption: string;
   unitProduct?: boolean;
+  unitBadge?: string;
   rows: CatalogPdfRow[];
 };
 
@@ -259,7 +260,7 @@ export async function downloadCatalogPdf({ title, intro, items, fileName }: Cata
     });
 
     if (item.unitProduct) {
-      const badgeLabel = "POR UNIDAD";
+      const badgeLabel = item.unitBadge ?? "POR UNIDAD";
       doc.setFont("helvetica", "bold");
       doc.setFontSize(5.5);
       const badgeW = doc.getTextWidth(badgeLabel) + 4;

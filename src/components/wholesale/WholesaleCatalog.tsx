@@ -28,6 +28,7 @@ const UNIT_PRESENTATION: Presentation[] = [{ grams: null, label: "Por unidad" }]
 const CUSTOM_GRAMS_MIN = 20;
 const CUSTOM_GRAMS_MAX = 100;
 const CUSTOM_UNIT_PRICE_MULTIPLIER = 1.5;
+const YERBA_MATE_PACK_SIZE = 10;
 
 /** Descripcion generica que agrega `mapProductDetails` cuando el producto no tiene texto propio. */
 const GENERIC_DESCRIPTION = "Producto seleccionado de nuestra tienda.";
@@ -42,7 +43,33 @@ const currency = new Intl.NumberFormat("es-AR", {
 const WEIGHT_UNITS = ["gramos", "gramo", "gs", "g", "kg", "kilo", "kilos"];
 
 function isSoldByWeight(product: Product) {
-  return WEIGHT_UNITS.includes((product.weight ?? "").trim().toLowerCase());
+  return !isYerbaMatePack(product) && WEIGHT_UNITS.includes((product.weight ?? "").trim().toLowerCase());
+}
+
+function isYerbaMatePack(product: Product) {
+  return normalizeCategory(product.category ?? "").includes("yerba mate");
+}
+
+function isYerbaMateCatalog(catalog: WholesaleCatalogConfig, products: Product[]) {
+  return [catalog.slug, catalog.title, catalog.categoryName]
+    .some((value) => normalizeCategory(value).includes("yerba mate"))
+    || products.some((product) =>
+      normalizeCategory(product.category) === normalizeCategory(catalog.categoryName)
+      && isYerbaMatePack(product)
+    );
+}
+
+function normalizeCategory(category: string) {
+  return category
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
+}
+
+function quantityStep(product: Product) {
+  return isYerbaMatePack(product) ? YERBA_MATE_PACK_SIZE : 1;
 }
 
 function presentationsFor(product: Product) {
@@ -58,6 +85,10 @@ function priceFor(product: Product, grams: number | null, customUnit = false) {
   if (grams === null) return product.price;
   const basePrice = (product.price * grams) / 1000;
   return customUnit ? basePrice * CUSTOM_UNIT_PRICE_MULTIPLIER : basePrice;
+}
+
+function orderUnitPrice(product: Product, grams: number | null, customUnit = false) {
+  return priceFor(product, grams, customUnit) * quantityStep(product);
 }
 
 function normalizeCustomGrams(raw: string) {
@@ -89,14 +120,21 @@ export function WholesaleCatalog() {
         const restored = Array.isArray(parsed)
           ? parsed
               .filter((line) => line?.product?.id && typeof line.quantity === "number" && line.quantity > 0)
-              .map((line) => {
-                const customUnit = Boolean(line.customUnit);
-                return {
-                  ...line,
-                  key: lineKey(line.product.id, line.grams, customUnit),
-                  customUnit
-                };
-              })
+              .reduce<OrderLine[]>((lines, line) => {
+                const packProduct = isYerbaMatePack(line.product);
+                const customUnit = packProduct ? false : Boolean(line.customUnit);
+                const grams = packProduct ? null : line.grams;
+                const step = quantityStep(line.product);
+                const key = lineKey(line.product.id, grams, customUnit);
+                const quantity = Math.ceil(line.quantity / step) * step;
+                const existing = lines.find((candidate) => candidate.key === key);
+                if (existing) {
+                  existing.quantity += quantity;
+                  return lines;
+                }
+                lines.push({ ...line, key, grams, customUnit, quantity });
+                return lines;
+              }, [])
           : [];
         setOrder(restored);
       }
@@ -201,21 +239,52 @@ export function WholesaleCatalog() {
 
         if (!active) return;
         setCatalogs(resolvedCatalogs);
-        setIsLoading(false);
         if (productsResult.error) {
+          setIsLoading(false);
           setLoadError("No pudimos cargar el catalogo mayorista.");
           return;
         }
-        setProducts(
-          (productsResult.data as ProductDetailsRow[] | null)
-            ?.map(mapProductDetails)
-            .filter((product): product is Product => product !== null) ?? []
+
+        const mappedProducts = ((productsResult.data as ProductDetailsRow[] | null) ?? [])
+          .map(mapProductDetails)
+          .filter((product): product is Product => product !== null);
+        const wholesalePricesResult = mappedProducts.length > 0
+          ? await db
+              .from("products")
+              .select("id,wholesale_calculated_price")
+              .in("id", mappedProducts.map((product) => product.id))
+          : null;
+
+        if (!active) return;
+        if (wholesalePricesResult?.error) {
+          setIsLoading(false);
+          setLoadError("No pudimos cargar los precios mayoristas.");
+          return;
+        }
+
+        const wholesalePriceById = new Map(
+          ((wholesalePricesResult?.data ?? []) as Array<{ id: string; wholesale_calculated_price: number | string | null }>)
+            .map((row) => [row.id, row.wholesale_calculated_price])
         );
+        const resolvedProducts = mappedProducts.map((product) => {
+          const wholesalePrice = wholesalePriceById.get(product.id);
+          const price = Number(wholesalePrice);
+          return wholesalePrice !== null && wholesalePrice !== undefined && Number.isFinite(price)
+            ? { ...product, price }
+            : null;
+        });
+        if (resolvedProducts.some((product) => product === null)) {
+          setIsLoading(false);
+          setLoadError("No pudimos cargar los precios mayoristas.");
+          return;
+        }
+        setProducts(resolvedProducts.filter((product): product is Product => product !== null));
         const images: Record<string, string> = {};
         ((categoriesResult.data ?? []) as { name: string; image_url: string | null }[]).forEach((cat) => {
           if (cat.image_url) images[cat.name] = cat.image_url;
         });
         setCategoryImages(images);
+        setIsLoading(false);
       })
       .catch(() => {
         if (!active) return;
@@ -244,7 +313,7 @@ export function WholesaleCatalog() {
     return [...filtered.filter(isSoldByWeight), ...filtered.filter((p) => !isSoldByWeight(p))];
   }, [activeCatalog, products, query]);
 
-  const totalUnits = order.reduce((total, line) => total + line.quantity, 0);
+  const totalUnits = order.reduce((total, line) => total + line.quantity / quantityStep(line.product), 0);
   const totalGrams = order.reduce((total, line) => total + (line.grams ?? 0) * line.quantity, 0);
   const orderTotal = order.reduce((total, line) => total + priceFor(line.product, line.grams, line.customUnit) * line.quantity, 0);
 
@@ -255,19 +324,26 @@ export function WholesaleCatalog() {
 
   function setQuantity(product: Product, grams: number | null, nextQuantity: number, customUnit = false) {
     const key = lineKey(product.id, grams, customUnit);
+    const normalizedQuantity = nextQuantity > 0
+      ? Math.ceil(nextQuantity / quantityStep(product)) * quantityStep(product)
+      : 0;
     setOrder((current) => {
-      if (nextQuantity <= 0) return current.filter((line) => line.key !== key);
+      if (normalizedQuantity <= 0) return current.filter((line) => line.key !== key);
       if (current.some((line) => line.key === key)) {
-        return current.map((line) => (line.key === key ? { ...line, quantity: nextQuantity } : line));
+        return current.map((line) => (line.key === key ? { ...line, quantity: normalizedQuantity } : line));
       }
-      return [...current, { key, product, grams, quantity: nextQuantity, customUnit }];
+      return [...current, { key, product, grams, quantity: normalizedQuantity, customUnit }];
     });
   }
 
   function changeQuantity(key: string, amount: number) {
     setOrder((current) =>
       current
-        .map((line) => (line.key === key ? { ...line, quantity: line.quantity + amount } : line))
+        .map((line) => {
+          if (line.key !== key) return line;
+          const nextQuantity = line.quantity + amount * quantityStep(line.product);
+          return { ...line, quantity: nextQuantity };
+        })
         .filter((line) => line.quantity > 0)
     );
   }
@@ -280,20 +356,24 @@ export function WholesaleCatalog() {
       const { downloadCatalogPdf } = await import("@/lib/catalogPdf");
       await downloadCatalogPdf({
         title: activeCatalog.title,
-        intro:
-          `Venta exclusiva mayorista. Las hierbas a granel se fraccionan en 1000 g, 500 g y 250 g. Tambien podes definir una unidad personalizada entre 20 g y 100 g; el resto se vende por unidad. Margen sugerido para reventa: ${normalizeMarginPercentage(marginPercentage)}%. Coordinamos disponibilidad, condiciones y envio por WhatsApp.`,
+        intro: isYerbaMateCatalog(activeCatalog, products)
+          ? `Venta exclusiva mayorista. Los productos de Yerba Mate se venden únicamente en packs de ${YERBA_MATE_PACK_SIZE} unidades. Coordinamos disponibilidad, condiciones y envio por WhatsApp.`
+          : `Venta exclusiva mayorista. Las hierbas a granel se fraccionan en 1000 g, 500 g y 250 g. Tambien podes definir una unidad personalizada entre 20 g y 100 g; el resto se vende por unidad. Margen sugerido para reventa: ${normalizeMarginPercentage(marginPercentage)}%. Coordinamos disponibilidad, condiciones y envio por WhatsApp.`,
         fileName: `lista-precios-${activeCatalog.slug}.pdf`,
         items: visibleProducts.map((product) => ({
           name: product.name,
           image: product.image,
           description: product.description === GENERIC_DESCRIPTION ? undefined : product.description,
-          priceCaption: isSoldByWeight(product)
-            ? `${currency.format(product.price)} por kilo`
-            : `${currency.format(product.price)} por unidad`,
+          priceCaption: isYerbaMatePack(product)
+            ? `${currency.format(orderUnitPrice(product, null))} por pack de ${YERBA_MATE_PACK_SIZE} un.`
+            : isSoldByWeight(product)
+              ? `${currency.format(product.price)} por kilo`
+              : `${currency.format(product.price)} por unidad`,
           unitProduct: !isSoldByWeight(product),
+          unitBadge: isYerbaMatePack(product) ? "POR PACK" : undefined,
           rows: presentationsFor(product).map((presentation) => ({
-            label: presentation.label,
-            price: priceFor(product, presentation.grams)
+            label: isYerbaMatePack(product) ? `Pack x${YERBA_MATE_PACK_SIZE}` : presentation.label,
+            price: orderUnitPrice(product, presentation.grams)
           }))
         }))
       });
@@ -319,9 +399,11 @@ export function WholesaleCatalog() {
         lines: order.map((line) => ({
           name: line.product.name,
           image: line.product.image,
-          presentation: line.grams === null ? "Por unidad" : line.customUnit ? `${line.grams} g personalizado` : `${line.grams} g`,
-          quantity: line.quantity,
-          unitPrice: priceFor(line.product, line.grams, line.customUnit),
+          presentation: line.grams === null
+            ? isYerbaMatePack(line.product) ? `Pack de ${YERBA_MATE_PACK_SIZE} unidades` : "Por unidad"
+            : line.customUnit ? `${line.grams} g personalizado` : `${line.grams} g`,
+          quantity: line.quantity / quantityStep(line.product),
+          unitPrice: orderUnitPrice(line.product, line.grams, line.customUnit),
           subtotal: priceFor(line.product, line.grams, line.customUnit) * line.quantity
         }))
       });
@@ -335,7 +417,7 @@ export function WholesaleCatalog() {
   function buildWhatsappLink() {
     const lines = order.map(
       (line, index) =>
-        `${index + 1}) ${line.product.name} - ${line.grams === null ? "por unidad" : line.customUnit ? `${line.grams} g personalizado` : `${line.grams} g`}\n   ${line.quantity} x ${currency.format(priceFor(line.product, line.grams, line.customUnit))} = ${currency.format(priceFor(line.product, line.grams, line.customUnit) * line.quantity)}`
+        `${index + 1}) ${line.product.name} - ${line.grams === null ? isYerbaMatePack(line.product) ? `Pack x${YERBA_MATE_PACK_SIZE} (${line.quantity} unidades)` : "por unidad" : line.customUnit ? `${line.grams} g personalizado` : `${line.grams} g`}\n   ${line.quantity / quantityStep(line.product)} x ${currency.format(orderUnitPrice(line.product, line.grams, line.customUnit))} = ${currency.format(priceFor(line.product, line.grams, line.customUnit) * line.quantity)}`
     );
 
     const message = [
@@ -472,6 +554,7 @@ export function WholesaleCatalog() {
         <div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {visibleProducts.map((product, index) => {
             const byWeight = isSoldByWeight(product);
+            const step = quantityStep(product);
             const basePresentations = presentationsFor(product);
             const customGramsInput = customGramsByProduct[product.id] ?? String(CUSTOM_GRAMS_MIN);
             const customGrams = normalizeCustomGrams(customGramsInput);
@@ -495,8 +578,14 @@ export function WholesaleCatalog() {
                 ) : null}
                 {firstUnitIndex !== -1 && index === firstUnitIndex ? (
                   <div className="col-span-full mt-2 border-t border-[#d7d2c7] pt-5">
-                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8a6a1a]">Por unidad</p>
-                    <p className="mt-0.5 text-xs text-muted">Estos productos se venden por unidad, sin fraccionado.</p>
+                    <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#8a6a1a]">
+                      {isYerbaMatePack(visibleProducts[firstUnitIndex]) ? "Venta por pack" : "Por unidad"}
+                    </p>
+                    <p className="mt-0.5 text-xs text-muted">
+                      {isYerbaMatePack(visibleProducts[firstUnitIndex])
+                        ? `Cada pack incluye ${YERBA_MATE_PACK_SIZE} unidades.`
+                        : "Estos productos se venden por unidad, sin fraccionado."}
+                    </p>
                   </div>
                 ) : null}
                 <article
@@ -514,19 +603,22 @@ export function WholesaleCatalog() {
                     />
                     {isUnit ? (
                       <span className="absolute right-2 top-2 rounded-full bg-[#c8a44a] px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wide text-white shadow-sm">
-                        Por unidad
+                        {isYerbaMatePack(product) ? `Pack x${YERBA_MATE_PACK_SIZE}` : "Por unidad"}
                       </span>
                     ) : null}
                   </div>
                   <div className="flex flex-1 flex-col p-5">
                     <h2 className="font-serif text-xl leading-tight text-[#20341d]">{product.name}</h2>
                     <p className="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-primary">
-                      {currency.format(product.price)} {byWeight ? "por kg" : "por unidad"}
+                      {currency.format(isYerbaMatePack(product) ? orderUnitPrice(product, null) : product.price)}
+                      {isYerbaMatePack(product) ? ` por pack de ${YERBA_MATE_PACK_SIZE}` : byWeight ? " por kg" : " por unidad"}
                     </p>
 
                     <fieldset className="mt-4">
                       <legend className="text-xs font-bold uppercase tracking-wide text-muted">
-                        {byWeight ? "Elegi cuantos paquetes de cada tamano o defini tu propia unidad" : "Elegi cuantas unidades"}
+                        {isYerbaMatePack(product)
+                          ? `Elegí paquetes de ${YERBA_MATE_PACK_SIZE} unidades`
+                          : byWeight ? "Elegi cuantos paquetes de cada tamano o defini tu propia unidad" : "Elegi cuantas unidades"}
                       </legend>
                       <div className="mt-2 space-y-2">
                         {byWeight ? (
@@ -558,7 +650,6 @@ export function WholesaleCatalog() {
                         ) : null}
                         {presentations.map((presentation) => {
                           const quantity = quantities.get(lineKey(product.id, presentation.grams, presentation.customUnit === true)) ?? 0;
-                          const baseUnitPrice = priceFor(product, presentation.grams, presentation.customUnit === true);
                           return (
                             <div
                               key={`${presentation.grams ?? "unidad"}-${presentation.customUnit ? "custom" : "std"}`}
@@ -567,9 +658,11 @@ export function WholesaleCatalog() {
                               }`}
                             >
                               <div className="min-w-0">
-                                <p className="text-sm font-bold text-[#20341d]">{presentation.label}</p>
+                                <p className="text-sm font-bold text-[#20341d]">
+                                  {isYerbaMatePack(product) ? `Pack x${YERBA_MATE_PACK_SIZE}` : presentation.label}
+                                </p>
                                 <p className="mt-1 text-sm font-bold text-[#385133]">
-                                  Precio NETO: {currency.format(baseUnitPrice)}
+                                  Precio NETO: {currency.format(orderUnitPrice(product, presentation.grams, presentation.customUnit === true))}
                                 </p>
                               </div>
 
@@ -577,9 +670,9 @@ export function WholesaleCatalog() {
                                 <div className="flex items-center gap-1.5">
                                   <button
                                     type="button"
-                                    onClick={() => setQuantity(product, presentation.grams, quantity - 1, presentation.customUnit === true)}
+                                    onClick={() => setQuantity(product, presentation.grams, quantity - step, presentation.customUnit === true)}
                                     className="grid h-9 w-9 place-items-center rounded-full border border-[#d7d2c7] bg-white transition hover:border-primary"
-                                    aria-label={`Quitar ${presentation.label} de ${product.name}`}
+                                    aria-label={`Quitar ${isYerbaMatePack(product) ? `un pack de ${YERBA_MATE_PACK_SIZE} unidades de ` : ""}${presentation.label} de ${product.name}`}
                                   >
                                     <Minus size={14} />
                                   </button>
@@ -587,13 +680,15 @@ export function WholesaleCatalog() {
                                     aria-live="polite"
                                     className="min-w-7 text-center text-sm font-bold text-[#20341d]"
                                   >
-                                    {quantity}
+                                    {isYerbaMatePack(product)
+                                      ? `${quantity / YERBA_MATE_PACK_SIZE} pack(s) · ${quantity} unid.`
+                                      : quantity}
                                   </span>
                                   <button
                                     type="button"
-                                    onClick={() => setQuantity(product, presentation.grams, quantity + 1, presentation.customUnit === true)}
+                                    onClick={() => setQuantity(product, presentation.grams, quantity + step, presentation.customUnit === true)}
                                     className="grid h-9 w-9 place-items-center rounded-full bg-[#20341d] text-white transition hover:bg-primary"
-                                    aria-label={`Agregar ${presentation.label} de ${product.name}`}
+                                    aria-label={`Agregar ${isYerbaMatePack(product) ? `un pack de ${YERBA_MATE_PACK_SIZE} unidades de ` : ""}${presentation.label} de ${product.name}`}
                                   >
                                     <Plus size={14} />
                                   </button>
@@ -602,7 +697,7 @@ export function WholesaleCatalog() {
                                 <button
                                   type="button"
                                   onClick={() => {
-                                    setQuantity(product, presentation.grams, 1, presentation.customUnit === true);
+                                    setQuantity(product, presentation.grams, step, presentation.customUnit === true);
                                     setAddedLine({
                                       product,
                                       grams: presentation.grams,
@@ -611,9 +706,9 @@ export function WholesaleCatalog() {
                                     });
                                   }}
                                   className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[#20341d] px-3.5 text-xs font-bold text-[#20341d] transition hover:bg-[#20341d] hover:text-white"
-                                  aria-label={`Agregar ${presentation.label} de ${product.name}`}
+                                  aria-label={`Agregar ${isYerbaMatePack(product) ? `un pack de ${YERBA_MATE_PACK_SIZE} unidades de ` : ""}${presentation.label} de ${product.name}`}
                                 >
-                                  <Plus size={14} /> Agregar
+                                  <Plus size={14} /> {isYerbaMatePack(product) ? `Agregar pack x${YERBA_MATE_PACK_SIZE}` : "Agregar"}
                                 </button>
                               )}
                             </div>
@@ -701,24 +796,31 @@ export function WholesaleCatalog() {
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-bold text-[#20341d]">{line.product.name}</p>
                           <p className="text-xs font-semibold text-muted">
-                            {line.grams === null ? "Por unidad" : line.customUnit ? `${line.grams} g personalizado` : `${line.grams} g`} ·{" "}
-                            {currency.format(priceFor(line.product, line.grams, line.customUnit))}
+                            {line.grams === null
+                              ? isYerbaMatePack(line.product) ? `${line.quantity / YERBA_MATE_PACK_SIZE} pack(s) de ${YERBA_MATE_PACK_SIZE} unidades` : "Por unidad"
+                              : line.customUnit ? `${line.grams} g personalizado` : `${line.grams} g`} ·{" "}
+                            {currency.format(orderUnitPrice(line.product, line.grams, line.customUnit))}
+                            {isYerbaMatePack(line.product) ? " por pack" : ""}
                           </p>
                           <div className="mt-2 flex items-center gap-2">
                             <button
                               type="button"
                               onClick={() => changeQuantity(line.key, -1)}
                               className="grid h-8 w-8 place-items-center rounded-full border border-[#d7d2c7]"
-                              aria-label={`Quitar una unidad de ${line.product.name}`}
+                              aria-label={`Quitar ${isYerbaMatePack(line.product) ? `un pack de ${YERBA_MATE_PACK_SIZE} unidades` : "una unidad"} de ${line.product.name}`}
                             >
                               <Minus size={14} />
                             </button>
-                            <span className="min-w-6 text-center text-sm font-bold">{line.quantity}</span>
+                            <span className="min-w-6 text-center text-sm font-bold">
+                              {isYerbaMatePack(line.product)
+                                ? `${line.quantity / YERBA_MATE_PACK_SIZE} pack(s) (${line.quantity} unid.)`
+                                : line.quantity}
+                            </span>
                             <button
                               type="button"
                               onClick={() => changeQuantity(line.key, 1)}
                               className="grid h-8 w-8 place-items-center rounded-full border border-[#d7d2c7]"
-                              aria-label={`Agregar una unidad de ${line.product.name}`}
+                              aria-label={`Agregar ${isYerbaMatePack(line.product) ? `un pack de ${YERBA_MATE_PACK_SIZE} unidades` : "una unidad"} de ${line.product.name}`}
                             >
                               <Plus size={14} />
                             </button>
@@ -820,7 +922,9 @@ export function WholesaleCatalog() {
                   <div className="min-w-0">
                     <p className="truncate text-sm font-semibold text-[#20341d]">{addedLine.product.name}</p>
                     <p className="mt-0.5 text-xs text-muted">
-                      {addedLine.label} &middot; {currency.format(priceFor(addedLine.product, addedLine.grams, addedLine.customUnit))}
+                      {isYerbaMatePack(addedLine.product)
+                        ? `1 pack de ${YERBA_MATE_PACK_SIZE} unidades`
+                        : addedLine.label} &middot; {currency.format(priceFor(addedLine.product, addedLine.grams, addedLine.customUnit))}
                     </p>
                   </div>
                 </div>

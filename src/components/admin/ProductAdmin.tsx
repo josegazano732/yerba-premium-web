@@ -13,6 +13,7 @@ import { WholesaleCatalogAdmin } from "@/components/admin/WholesaleCatalogAdmin"
 import { promoBannerPath, promoBannerSlots, promoBannerUrl } from "@/components/home/PromoBanner";
 import { convertImageToWebp, IMAGE_FILE_ACCEPT, isSupportedImageFile, MAX_IMAGE_BYTES } from "@/lib/client-images";
 import { supabase } from "@/lib/supabase";
+import { calculateWholesalePrice, type WholesalePricingMode } from "@/lib/wholesale";
 
 type Category = {
   id: string;
@@ -41,6 +42,10 @@ type AdminProduct = {
   seasonal: boolean | null;
   cost: number | string | null;
   markup_percentage: number | string | null;
+  wholesale_price_mode: WholesalePricingMode;
+  wholesale_price: number | string | null;
+  wholesale_cost_percentage: number | string | null;
+  wholesale_calculated_price: number | string | null;
   updated_at: string | null;
 };
 
@@ -55,6 +60,9 @@ type ProductForm = {
   seasonal: boolean;
   cost: string;
   markupPercentage: string;
+  wholesalePriceMode: WholesalePricingMode;
+  wholesalePrice: string;
+  wholesaleCostPercentage: string;
 };
 
 const UNIT_OPTIONS = [
@@ -72,7 +80,10 @@ const emptyForm: ProductForm = {
   stock: "0",
   seasonal: false,
   cost: "",
-  markupPercentage: ""
+  markupPercentage: "",
+  wholesalePriceMode: "retail",
+  wholesalePrice: "",
+  wholesaleCostPercentage: ""
 };
 
 const currency = new Intl.NumberFormat("es-AR", {
@@ -128,7 +139,7 @@ export function ProductAdmin() {
     const [productsResult, categoriesResult, productRelationsResult, subcategoriesResult] = await Promise.all([
       supabase.from("product_details").select("id,name,description,price,image,image_urls,category_id,category_name,unit_of_measure,stock,seasonal,cost,markup_percentage,updated_at").order("updated_at", { ascending: false }),
       supabase.from("product_categories").select("id,name").eq("is_active", true).order("display_order"),
-      supabase.from("products").select("id,subcategory_id"),
+      supabase.from("products").select("id,subcategory_id,wholesale_price_mode,wholesale_price,wholesale_cost_percentage,wholesale_calculated_price"),
       supabase.from("product_subcategories").select("id,category_id,name").eq("is_active", true).order("display_order").order("name")
     ]);
     setLoading(false);
@@ -138,18 +149,33 @@ export function ProductAdmin() {
     }
     const nextSubcategories = (subcategoriesResult.data as Subcategory[] | null) ?? [];
     const subcategoryById = new Map(nextSubcategories.map((subcategory) => [subcategory.id, subcategory.name]));
-    const subcategoryIdByProduct = new Map(
-      ((productRelationsResult.data as Array<{ id: string; subcategory_id: string | null }> | null) ?? [])
-        .map((product) => [product.id, product.subcategory_id])
+    const productSettingsById = new Map(
+      ((productRelationsResult.data as Array<{
+        id: string;
+        subcategory_id: string | null;
+        wholesale_price_mode: WholesalePricingMode;
+        wholesale_price: number | string | null;
+        wholesale_cost_percentage: number | string | null;
+        wholesale_calculated_price: number | string | null;
+      }> | null) ?? []).map((product) => [product.id, product])
     );
+    const detailedProducts = (productsResult.data as Omit<AdminProduct, "subcategory_id" | "subcategory_name" | "wholesale_price_mode" | "wholesale_price" | "wholesale_cost_percentage" | "wholesale_calculated_price">[] | null) ?? [];
+    if (detailedProducts.some((product) => !productSettingsById.has(product.id))) {
+      setMessage("No se pudieron cargar los precios mayoristas de todos los productos.");
+      return;
+    }
     setProducts(
-      ((productsResult.data as Omit<AdminProduct, "subcategory_id" | "subcategory_name">[] | null) ?? [])
-        .map((product) => {
-          const subcategoryId = subcategoryIdByProduct.get(product.id) ?? null;
+      detailedProducts.map((product) => {
+          const settings = productSettingsById.get(product.id);
+          const subcategoryId = settings?.subcategory_id ?? null;
           return {
             ...product,
             subcategory_id: subcategoryId,
-            subcategory_name: subcategoryId ? subcategoryById.get(subcategoryId) ?? null : null
+            subcategory_name: subcategoryId ? subcategoryById.get(subcategoryId) ?? null : null,
+            wholesale_price_mode: settings?.wholesale_price_mode ?? "retail",
+            wholesale_price: settings?.wholesale_price ?? null,
+            wholesale_cost_percentage: settings?.wholesale_cost_percentage ?? null,
+            wholesale_calculated_price: settings?.wholesale_calculated_price ?? product.price
           };
         })
     );
@@ -193,7 +219,10 @@ export function ProductAdmin() {
       stock: String(product.stock ?? 0),
       seasonal: Boolean(product.seasonal),
       cost: String(product.cost ?? ""),
-      markupPercentage: String(product.markup_percentage ?? "")
+      markupPercentage: String(product.markup_percentage ?? ""),
+      wholesalePriceMode: product.wholesale_price_mode,
+      wholesalePrice: String(product.wholesale_price ?? ""),
+      wholesaleCostPercentage: String(product.wholesale_cost_percentage ?? "")
     });
     setProductImages([]);
     setExistingImages(product.image_urls?.length ? product.image_urls : product.image ? [product.image] : []);
@@ -227,6 +256,25 @@ export function ProductAdmin() {
     if (!supabase) return;
     setSaving(true);
     setMessage("");
+    if (form.wholesalePriceMode === "manual" && (!form.wholesalePrice || !Number.isFinite(Number(form.wholesalePrice)) || Number(form.wholesalePrice) < 0)) {
+      setSaving(false);
+      setMessage("Ingresá un precio mayorista manual válido.");
+      return;
+    }
+    if (form.wholesalePriceMode === "cost_percentage") {
+      const cost = Number(form.cost);
+      const percentage = Number(form.wholesaleCostPercentage);
+      if (!form.cost || !Number.isFinite(cost) || cost < 0) {
+        setSaving(false);
+        setMessage("Para calcular el precio mayorista por porcentaje, ingresá un costo válido.");
+        return;
+      }
+      if (!form.wholesaleCostPercentage || !Number.isFinite(percentage) || percentage < 0) {
+        setSaving(false);
+        setMessage("Ingresá un porcentaje mayorista válido.");
+        return;
+      }
+    }
     if (!form.subcategoryId) {
       setSaving(false);
       setMessage("Seleccioná una subcategoría. Podés crearla desde la pestaña Parámetros.");
@@ -262,7 +310,10 @@ export function ProductAdmin() {
       stock: Number(form.stock),
       seasonal: form.seasonal,
       cost: form.cost ? Number(form.cost) : null,
-      markup_percentage: form.markupPercentage ? Number(form.markupPercentage) : null
+      markup_percentage: form.markupPercentage ? Number(form.markupPercentage) : null,
+      wholesale_price_mode: form.wholesalePriceMode,
+      wholesale_price: form.wholesalePriceMode === "manual" ? Number(form.wholesalePrice) : null,
+      wholesale_cost_percentage: form.wholesalePriceMode === "cost_percentage" ? Number(form.wholesaleCostPercentage) : null
     };
     const result = editingProduct
       ? await supabase.from("products").update(payload).eq("id", editingProduct.id)
@@ -297,6 +348,13 @@ export function ProductAdmin() {
     `${product.name} ${product.category_name ?? ""} ${product.subcategory_name ?? ""}`.toLowerCase().includes(deferredQuery)
   );
   const availableSubcategories = subcategories.filter((subcategory) => subcategory.category_id === form.categoryId);
+  const wholesalePricePreview = calculateWholesalePrice({
+    mode: form.wholesalePriceMode,
+    retailPrice: form.price,
+    cost: form.cost,
+    manualPrice: form.wholesalePrice,
+    costPercentage: form.wholesaleCostPercentage
+  });
 
   if (checkingSession) {
     return <main className="grid min-h-[70vh] place-items-center bg-[#f3f1ea]"><p className="text-sm font-bold text-muted">Verificando acceso...</p></main>;
@@ -367,10 +425,10 @@ export function ProductAdmin() {
               </div>
               {message ? <p role="status" className="border-b border-[#e0e2dc] bg-[#f5f7f1] px-4 py-3 text-sm font-semibold text-[#385133]">{message}</p> : null}
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[850px] border-collapse text-left text-sm">
-                  <thead className="bg-[#f5f4ef] text-xs uppercase tracking-wider text-muted"><tr><th className="px-4 py-3">Producto</th><th className="px-4 py-3">Categoría</th><th className="px-4 py-3">Precio</th><th className="px-4 py-3">Stock</th><th className="px-4 py-3">Estado</th><th className="px-4 py-3 text-right">Acciones</th></tr></thead>
+                <table className="w-full min-w-[950px] border-collapse text-left text-sm">
+                  <thead className="bg-[#f5f4ef] text-xs uppercase tracking-wider text-muted"><tr><th className="px-4 py-3">Producto</th><th className="px-4 py-3">Categoría</th><th className="px-4 py-3">Precio</th><th className="px-4 py-3">Mayorista</th><th className="px-4 py-3">Stock</th><th className="px-4 py-3">Estado</th><th className="px-4 py-3 text-right">Acciones</th></tr></thead>
                   <tbody className="divide-y divide-[#e5e6e1]">
-                    {filteredProducts.map((product) => <tr key={product.id} className="hover:bg-[#fafaf7]"><td className="max-w-sm px-4 py-4 font-bold text-[#1d2d1a]">{product.name}</td><td className="px-4 py-4"><span className="block text-[#263324]">{product.category_name ?? "Sin categoría"}</span><span className="mt-0.5 block text-xs text-muted">{product.subcategory_name ?? "Sin subcategoría"}</span></td><td className="px-4 py-4 font-bold">{currency.format(Number(product.price ?? 0))}</td><td className="px-4 py-4"><span className={Number(product.stock) > 0 ? "text-[#385133]" : "font-bold text-red-700"}>{Number(product.stock ?? 0)}</span></td><td className="px-4 py-4"><span className="inline-flex rounded-full bg-[#e8eee3] px-2.5 py-1 text-xs font-bold text-[#385133]">{product.seasonal ? "Temporada" : "Activo"}</span></td><td className="px-4 py-4"><div className="flex justify-end gap-2"><button type="button" onClick={() => openEdit(product)} className="h-9 border border-[#cfd4c9] px-3 text-xs font-bold hover:border-primary">Editar</button><button type="button" onClick={() => setDeletingProduct(product)} className="grid h-9 w-9 place-items-center border border-[#e2caca] text-red-700 hover:bg-red-50" aria-label={`Eliminar ${product.name}`}><Trash2 size={16} /></button></div></td></tr>)}
+                    {filteredProducts.map((product) => <tr key={product.id} className="hover:bg-[#fafaf7]"><td className="max-w-sm px-4 py-4 font-bold text-[#1d2d1a]">{product.name}</td><td className="px-4 py-4"><span className="block text-[#263324]">{product.category_name ?? "Sin categoría"}</span><span className="mt-0.5 block text-xs text-muted">{product.subcategory_name ?? "Sin subcategoría"}</span></td><td className="px-4 py-4 font-bold">{currency.format(Number(product.price ?? 0))}</td><td className="px-4 py-4 font-bold text-[#385133]">{currency.format(Number(product.wholesale_calculated_price ?? product.price ?? 0))}</td><td className="px-4 py-4"><span className={Number(product.stock) > 0 ? "text-[#385133]" : "font-bold text-red-700"}>{Number(product.stock ?? 0)}</span></td><td className="px-4 py-4"><span className="inline-flex rounded-full bg-[#e8eee3] px-2.5 py-1 text-xs font-bold text-[#385133]">{product.seasonal ? "Temporada" : "Activo"}</span></td><td className="px-4 py-4"><div className="flex justify-end gap-2"><button type="button" onClick={() => openEdit(product)} className="h-9 border border-[#cfd4c9] px-3 text-xs font-bold hover:border-primary">Editar</button><button type="button" onClick={() => setDeletingProduct(product)} className="grid h-9 w-9 place-items-center border border-[#e2caca] text-red-700 hover:bg-red-50" aria-label={`Eliminar ${product.name}`}><Trash2 size={16} /></button></div></td></tr>)}
                   </tbody>
                 </table>
               </div>
@@ -481,6 +539,46 @@ export function ProductAdmin() {
                   <div className="space-y-5">
                     <ProductFormSection icon={<Plus size={18} />} eyebrow="Presentación" title="Galería">
                       <ProductImagePicker files={productImages} existingImages={existingImages} onChange={setProductImages} />
+                    </ProductFormSection>
+
+                    <ProductFormSection icon={<PackageCheck size={18} />} eyebrow="Venta mayorista" title="Precio mayorista">
+                      <AdminField label="Cómo definir el precio">
+                        <select
+                          value={form.wholesalePriceMode}
+                          onChange={(event) => {
+                            const mode = event.target.value;
+                            if (mode === "retail" || mode === "manual" || mode === "cost_percentage") {
+                              setForm({ ...form, wholesalePriceMode: mode });
+                            }
+                          }}
+                          className="admin-input"
+                        >
+                          <option value="retail">Usar el precio minorista</option>
+                          <option value="manual">Definir un precio manual</option>
+                          <option value="cost_percentage">Porcentaje sobre el costo</option>
+                        </select>
+                      </AdminField>
+                      {form.wholesalePriceMode === "manual" ? (
+                        <div className="mt-4">
+                          <AdminField label="Precio mayorista manual">
+                            <input required min="0" step="0.01" type="number" inputMode="decimal" value={form.wholesalePrice} onChange={(event) => setForm({ ...form, wholesalePrice: event.target.value })} className="admin-input" />
+                          </AdminField>
+                        </div>
+                      ) : null}
+                      {form.wholesalePriceMode === "cost_percentage" ? (
+                        <div className="mt-4">
+                          <AdminField label="Recargo sobre el costo (%)">
+                            <input required min="0" step="0.01" type="number" inputMode="decimal" value={form.wholesaleCostPercentage} onChange={(event) => setForm({ ...form, wholesaleCostPercentage: event.target.value })} className="admin-input" />
+                          </AdminField>
+                          <p className="mt-2 text-xs leading-5 text-muted">El costo se carga en Datos internos. El precio mayorista se calcula como costo + este porcentaje.</p>
+                        </div>
+                      ) : null}
+                      <p className="mt-4 border-t border-[#e7e8e3] pt-4 text-sm font-bold text-[#263324]">
+                        Precio mayorista resultante:{" "}
+                        <span className="text-[#385133]">
+                          {wholesalePricePreview === null ? "Completá los datos requeridos" : currency.format(wholesalePricePreview)}
+                        </span>
+                      </p>
                     </ProductFormSection>
 
                     <ProductFormSection icon={<Check size={18} />} eyebrow="Rentabilidad" title="Datos internos">

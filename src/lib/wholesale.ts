@@ -19,6 +19,16 @@ export type WholesaleMarginProfile = {
   displayOrder: number;
 };
 
+export type WholesalePricingMode = "retail" | "manual" | "cost_percentage";
+
+export type WholesalePricingInput = {
+  mode: WholesalePricingMode;
+  retailPrice: number | string | null;
+  cost: number | string | null;
+  manualPrice: number | string | null;
+  costPercentage: number | string | null;
+};
+
 export const VAT_RATE = 0.21;
 
 export const DEFAULT_MARGIN_PROFILES: WholesaleMarginProfile[] = [
@@ -81,6 +91,29 @@ export const DEFAULT_WHOLESALE_CATALOGS: WholesaleCatalogConfig[] = [
 export function normalizeMarginPercentage(value: number) {
   if (!Number.isFinite(value)) return 30;
   return Math.min(90, Math.max(1, Number(value)));
+}
+
+export function calculateWholesalePrice({
+  mode,
+  retailPrice,
+  cost,
+  manualPrice,
+  costPercentage
+}: WholesalePricingInput): number | null {
+  const parseNonNegative = (value: number | string | null) => {
+    if (value === null || value === "") return null;
+    const parsed = Number(value);
+    return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+  };
+
+  if (mode === "retail") return parseNonNegative(retailPrice);
+  if (mode === "manual") return parseNonNegative(manualPrice);
+
+  const parsedCost = parseNonNegative(cost);
+  const parsedPercentage = parseNonNegative(costPercentage);
+  if (parsedCost === null || parsedPercentage === null) return null;
+
+  return Math.round((parsedCost * (1 + parsedPercentage / 100) + Number.EPSILON) * 100) / 100;
 }
 
 export function slugifyCatalog(input: string) {

@@ -26,6 +26,27 @@ export const AI_TOOLS: ChatCompletionTool[] = [
   {
     type: "function",
     function: {
+      name: "search_wholesale_products",
+      description: "Busca productos y precios reales de los catálogos mayoristas activos. Usala para consultas sobre precio mayorista, reventa o compra por volumen; nunca uses el precio minorista para responder una consulta mayorista.",
+      parameters: {
+        type: "object",
+        properties: {
+          query: { type: "string", description: "Producto, marca o necesidad que busca el cliente" },
+          catalog: { type: "string", description: "Nombre o slug de un catálogo mayorista real" },
+          category_id: { type: "string", description: "ID exacto de una categoría validada" },
+          category: { type: "string", description: "Nombre exacto de una categoría real" },
+          subcategory_id: { type: "string", description: "ID exacto de una subcategoría validada" },
+          subcategory: { type: "string", description: "Nombre exacto de una subcategoría real" },
+          maxPrice: { type: "number", description: "Precio mayorista máximo en ARS" },
+          limit: { type: "number", description: "Cantidad de resultados. Default 5, máximo 8." }
+        },
+        required: []
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
       name: "get_product",
       description: "Obtiene información completa de un producto por su ID.",
       parameters: {

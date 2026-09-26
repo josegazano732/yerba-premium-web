@@ -49,6 +49,13 @@ export type CommerceContext = {
   };
 };
 
+export type CommerceTaxonomy = {
+  id: string;
+  name: string;
+  categoryId?: string;
+  categoryName?: string;
+};
+
 type ContextCartInput = CommerceCartItem & {
   unitPrice: number;
 };
@@ -58,6 +65,8 @@ type UpdateContextInput = {
   message: string;
   currentProductId?: string;
   cart: ContextCartInput[];
+  categories?: CommerceTaxonomy[];
+  subcategories?: CommerceTaxonomy[];
 };
 
 const CATEGORY_HINTS: Array<{ pattern: RegExp; category: string }> = [
@@ -67,7 +76,7 @@ const CATEGORY_HINTS: Array<{ pattern: RegExp; category: string }> = [
   { pattern: /\b(botellas? termicas?|vasos? termicos?|termolares?|autocebante)\b/i, category: "Térmico" },
   { pattern: /\b(yerberas?)\b/i, category: "Yerberas" },
   { pattern: /\b(hierbas?|hibiscus|flores?|te verde|te rojo|menta|burrito)\b/i, category: "Hierbas" },
-  { pattern: /\b(mates?|camionero|imperial|torpedo|galleta)\b/i, category: "Mates" },
+  { pattern: /\b(camionero|imperial|torpedo|galleta)\b/i, category: "Mates" },
 ];
 
 const SUBCATEGORY_HINTS: Array<{ pattern: RegExp; category: string; subcategory: string }> = [
@@ -115,10 +124,13 @@ export function updateCommerceContext({
   message,
   currentProductId,
   cart,
+  categories,
+  subcategories,
 }: UpdateContextInput): CommerceContext {
   const context = previous ?? createCommerceContext();
   const normalized = normalizeText(message);
-  const taxonomy = detectTaxonomy(message);
+  const taxonomy = detectTaxonomy(message, categories, subcategories);
+  const isYerbaMateIntent = isYerbaMateSearch(normalized);
   const budget = extractBudget(normalized);
   const quantity = extractQuantity(normalized);
   const purchaseIntent = detectPurchaseIntent(normalized);
@@ -136,10 +148,12 @@ export function updateCommerceContext({
 
   return {
     ...context,
-    state: detectConversationState(normalized, purchaseIntent, cart.length > 0),
+    state: detectConversationState(normalized, purchaseIntent, cart.length > 0, Boolean(taxonomy)),
     intent: message.trim(),
-    categoryName: taxonomy?.category ?? context.categoryName,
-    subcategoryName: taxonomy?.subcategory ?? context.subcategoryName,
+    categoryId: taxonomy?.categoryId ?? (isYerbaMateIntent ? undefined : context.categoryId),
+    categoryName: taxonomy?.category ?? (isYerbaMateIntent ? undefined : context.categoryName),
+    subcategoryId: taxonomy?.subcategoryId ?? (isYerbaMateIntent ? undefined : context.subcategoryId),
+    subcategoryName: taxonomy?.subcategory ?? (isYerbaMateIntent ? undefined : context.subcategoryName),
     currentProductId: currentProductId ?? context.currentProductId,
     productId: resolvedProductId ?? context.productId,
     lastSelectedProductId: resolvedProductId ?? context.lastSelectedProductId,
@@ -203,9 +217,54 @@ export function resolveContextualProductId(
 }
 
 export function detectTaxonomy(
-  message: string
-): { category: string; subcategory?: string } | undefined {
+  message: string,
+  categories?: CommerceTaxonomy[],
+  subcategories?: CommerceTaxonomy[]
+): { category: string; categoryId?: string; subcategory?: string; subcategoryId?: string } | undefined {
   const normalized = normalizeText(message);
+  const matchedSubcategories = (subcategories ?? [])
+    .filter((subcategory) => containsPhrase(normalized, subcategory.name))
+    .sort((left, right) => right.name.length - left.name.length);
+  const matchedCategories = (categories ?? [])
+    .filter((category) => containsPhrase(normalized, category.name))
+    .sort((left, right) => right.name.length - left.name.length);
+  const isYerbaMateQuery = /\byerba(?:s)?\s+mate(?:s)?\b/.test(normalized);
+
+  const relevantSubcategories = matchedSubcategories.filter((subcategory) => {
+    if (!isYerbaMateQuery) return true;
+    const parent = categories?.find((category) => category.id === subcategory.categoryId);
+    return (
+      normalizeText(subcategory.name).includes("yerba") ||
+      normalizeText(subcategory.categoryName ?? parent?.name ?? "").includes("yerba")
+    );
+  });
+
+  if (relevantSubcategories.length > 0) {
+    const explicitlyMatched = matchedCategories[0];
+    const subcategory = relevantSubcategories.find(
+      (candidate) => !explicitlyMatched || candidate.categoryId === explicitlyMatched.id
+    );
+    const unambiguous = subcategory ?? (relevantSubcategories.length === 1 ? relevantSubcategories[0] : undefined);
+    if (unambiguous) {
+      const parent = categories?.find((category) => category.id === unambiguous.categoryId);
+      return {
+        category: parent?.name ?? unambiguous.categoryName ?? explicitlyMatched?.name ?? "",
+        ...(parent?.id || explicitlyMatched?.id
+          ? { categoryId: parent?.id ?? explicitlyMatched?.id }
+          : {}),
+        subcategory: unambiguous.name,
+        subcategoryId: unambiguous.id,
+      };
+    }
+  }
+
+  const relevantCategory = matchedCategories.find(
+    (category) => !isYerbaMateQuery || normalizeText(category.name).includes("yerba")
+  );
+  if (relevantCategory) {
+    return { category: relevantCategory.name, categoryId: relevantCategory.id };
+  }
+
   const subcategory = SUBCATEGORY_HINTS.find(({ pattern }) => pattern.test(normalized));
   if (subcategory) {
     return { category: subcategory.category, subcategory: subcategory.subcategory };
@@ -215,10 +274,21 @@ export function detectTaxonomy(
   return category ? { category: category.category } : undefined;
 }
 
+export function isYerbaMateProduct(name: string): boolean {
+  const normalizedName = normalizeText(name);
+  const nameTokens = new Set(normalizedName.split(/[^a-z0-9]+/).filter(Boolean));
+  return (
+    nameTokens.has("yerba") ||
+    nameTokens.has("mateite") ||
+    /\bdon\s+julian\b/.test(normalizedName)
+  );
+}
+
 function detectConversationState(
   normalized: string,
   purchaseIntent: PurchaseIntent,
-  hasCart: boolean
+  hasCart: boolean,
+  hasTaxonomy: boolean
 ): ConversationState {
   if (/\b(persona|vendedor|asesor|atencion humana|whatsapp)\b/.test(normalized)) return "HUMAN_HANDOFF";
   if (/^(?:no,?\s*)?(?:gracias|eso era todo|listo|nada mas|no necesito nada mas)[.!]?$/.test(normalized)) {
@@ -229,7 +299,7 @@ function detectConversationState(
   }
   if (purchaseIntent === "very_high") return "PURCHASE_INTENT";
   if (/\b(compar|cual (?:es mejor|me recomendas)|recomenda)\b/.test(normalized)) return "CONSIDERATION";
-  if (detectTaxonomy(normalized)) return "SEARCH";
+  if (hasTaxonomy || isWholesaleSearch(normalized) || isYerbaMateSearch(normalized)) return "SEARCH";
   if (hasCart) return "CART";
   return "DISCOVERY";
 }
@@ -238,9 +308,17 @@ function detectPurchaseIntent(normalized: string): PurchaseIntent {
   if (/\b(quiero ese|quiero esa|agregalo|agregala|agrega (?:uno|una|\d+)|me llevo|comprarlo|comprarla|sumalo|sumala)\b/.test(normalized)) {
     return "very_high";
   }
-  if (/\b(hay stock|cuanto (?:sale|cuesta)|precio|capacidad)\b/.test(normalized)) return "high";
+  if (/\b(hay stock|cuanto (?:sale|cuesta)|precio|capacidad|mayorista|mayoristas|revendedor|reventa)\b/.test(normalized)) return "high";
   if (/\b(recomenda|cual es mejor|compar)\b/.test(normalized)) return "medium";
   return "low";
+}
+
+function isWholesaleSearch(normalized: string): boolean {
+  return /\b(mayorista|mayoristas|revendedor|revendedores|reventa|por volumen)\b/.test(normalized);
+}
+
+function isYerbaMateSearch(normalized: string): boolean {
+  return /\byerba(?:s)?\s+mate(?:s)?\b/.test(normalized);
 }
 
 function extractBudget(normalized: string): number | undefined {
@@ -289,4 +367,18 @@ function normalizeText(value: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
     .trim();
+}
+
+function containsPhrase(normalizedText: string, phrase: string): boolean {
+  const normalizedPhrase = normalizeText(phrase);
+  if (!normalizedPhrase) return false;
+  const flexiblePhrase = normalizedPhrase
+    .split(/\s+/)
+    .map((word) => `${escapeRegExp(word.endsWith("s") ? word.slice(0, -1) : word)}s?`)
+    .join("\\s+");
+  return new RegExp(`(?:^|[^a-z0-9])${flexiblePhrase}(?=$|[^a-z0-9])`).test(normalizedText);
+}
+
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

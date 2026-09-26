@@ -4,7 +4,7 @@ import { getOpenAIClient } from "@/lib/ai/openai";
 import { AI_TOOLS } from "@/lib/ai/tools";
 import { buildSystemPrompt } from "@/lib/ai/prompt";
 import { getStoredSystemPrompt } from "@/lib/ai/settings";
-import { executeTool } from "@/lib/ai/execute-tool";
+import { executeTool, loadAiReferenceData } from "@/lib/ai/execute-tool";
 import type { AiChatRequest, AiChatResponse, CartAction } from "@/lib/ai/types";
 import type { Product } from "@/data/products";
 import { cartProductItems } from "@/lib/cart";
@@ -24,11 +24,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json<AiChatResponse>({ message: "Mensaje vacío.", error: "empty" }, { status: 400 });
     }
 
+    const referenceData = await loadAiReferenceData();
     const typedCart = cart as CartItem[];
     let nextContext = updateCommerceContext({
       previous: commerceContext,
       message,
       currentProductId,
+      categories: referenceData.categories,
+      subcategories: referenceData.subcategories,
       cart: cartProductItems(typedCart).map((item) => ({
         productId: item.product.id,
         quantity: item.quantity,
@@ -50,6 +53,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const sessionContext = {
       commerce: nextContext,
+      referenceData,
       whatsappUrl: `https://wa.me/${site.whatsappNumber}`,
       checkoutUrl: `${site.baseUrl}/checkout`,
     };
@@ -69,6 +73,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const collectedActions: CartAction[] = [];
     const collectedProducts: Product[] = [];
+    let searchedYerbaMate = false;
+    let foundYerbaMate = false;
 
     let response = await openai.chat.completions.create({
       model: "deepseek-chat",
@@ -96,9 +102,13 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           // argumentos malformados
         }
 
-        args = applyStructuredContext(call.function.name, args, nextContext);
+        args = applyStructuredContext(call.function.name, args, nextContext, message, referenceData.categories);
         const toolResult = await executeTool(call.function.name, args, typedCart);
 
+        if (call.function.name === "search_products" && isYerbaMateSearch(message)) {
+          searchedYerbaMate = true;
+          foundYerbaMate = Boolean(toolResult.products?.length);
+        }
         if (toolResult.cartAction) collectedActions.push(toolResult.cartAction);
         if (toolResult.products) collectedProducts.push(...toolResult.products);
 
@@ -108,6 +118,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
           category: nextContext.categoryName,
           subcategory: nextContext.subcategoryName,
           toolUsed: call.function.name,
+          searchFilters: call.function.name.startsWith("search_")
+            ? {
+                query: args.query,
+                category: args.category ?? args.category_id,
+                subcategory: args.subcategory ?? args.subcategory_id,
+              }
+            : undefined,
+          matchedProducts: toolResult.products?.length ?? 0,
           productId: args.product_id,
           purchaseIntent: nextContext.purchaseIntent,
         });
@@ -131,13 +149,16 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
     const rawMessage = response.choices[0]?.message?.content ?? "No pude generar una respuesta. Por favor, intentá de nuevo.";
     const { text, quickReplies } = parseQuickReplies(rawMessage);
+    const finalMessage = searchedYerbaMate && !foundYerbaMate
+      ? `No encuentro yerba mate disponible en el catálogo en este momento. Las yerberas son recipientes para guardar yerba, no yerba para tomar. Si querés, consultá disponibilidad por WhatsApp: https://wa.me/${site.whatsappNumber}`
+      : text;
     nextContext = withRecommendedProducts(
       nextContext,
       deduplicateById(collectedProducts).map((product) => product.id)
     );
 
     const result: AiChatResponse = {
-      message: text,
+      message: finalMessage,
       ...(collectedProducts.length > 0 ? { products: deduplicateById(collectedProducts) } : {}),
       ...(quickReplies.length > 0 ? { quickReplies } : {}),
       ...(collectedActions.length > 0 ? { cartActions: collectedActions } : {}),
@@ -175,19 +196,59 @@ function parseQuickReplies(text: string): { text: string; quickReplies: string[]
 function applyStructuredContext(
   toolName: string,
   args: Record<string, unknown>,
-  context: NonNullable<AiChatResponse["commerceContext"]>
+  context: NonNullable<AiChatResponse["commerceContext"]>,
+  message: string,
+  categories: Array<{ id: string; name: string }>
 ): Record<string, unknown> {
   const next = { ...args };
   const productTools = new Set(["get_product", "check_stock", "add_to_cart"]);
 
-  if (toolName === "search_products") {
-    if (!next.category_id && !next.category && context.categoryId) next.category_id = context.categoryId;
-    if (!next.category_id && !next.category && context.categoryName) next.category = context.categoryName;
-    if (!next.subcategory_id && !next.subcategory && context.subcategoryId) {
-      next.subcategory_id = context.subcategoryId;
+  if (toolName === "search_products" || toolName === "search_wholesale_products") {
+    const normalizedMessage = normalizeSearchText(message);
+    const yerbaMateQuery = /\byerbas?\s+mates?\b/.test(normalizedMessage);
+    const requestedCategoryId = typeof next.category_id === "string" ? next.category_id : undefined;
+    const requestedCategoryName = typeof next.category === "string" ? next.category : undefined;
+    const selectedCategory = categories.find((category) =>
+      requestedCategoryId
+        ? category.id === requestedCategoryId
+        : requestedCategoryName
+          ? normalizeSearchText(category.name) === normalizeSearchText(requestedCategoryName)
+          : false
+    );
+    const contextCategoryIsMates =
+      normalizeSearchText(context.categoryName ?? "") === "mates" ||
+      categories.some(
+        (category) =>
+          category.id === context.categoryId &&
+          normalizeSearchText(category.name) === "mates"
+      );
+
+    if (toolName === "search_products" && yerbaMateQuery) {
+      next.query = message;
+      if (selectedCategory && normalizeSearchText(selectedCategory.name) === "mates") {
+        delete next.category_id;
+        delete next.category;
+      }
+      if (!next.category_id && !next.category) {
+        delete next.subcategory_id;
+        delete next.subcategory;
+      }
+      if (!next.category_id && !next.category && contextCategoryIsMates) {
+        delete next.subcategory_id;
+        delete next.subcategory;
+      }
+      if (typeof next.query !== "string" || !next.query.trim()) next.query = message;
     }
-    if (!next.subcategory_id && !next.subcategory && context.subcategoryName) {
-      next.subcategory = context.subcategoryName;
+
+    if (!(toolName === "search_products" && yerbaMateQuery && contextCategoryIsMates)) {
+      if (!next.category_id && !next.category && context.categoryId) next.category_id = context.categoryId;
+      if (!next.category_id && !next.category && context.categoryName) next.category = context.categoryName;
+      if (!next.subcategory_id && !next.subcategory && context.subcategoryId) {
+        next.subcategory_id = context.subcategoryId;
+      }
+      if (!next.subcategory_id && !next.subcategory && context.subcategoryName) {
+        next.subcategory = context.subcategoryName;
+      }
     }
     if (next.maxPrice === undefined && context.budget !== undefined) next.maxPrice = context.budget;
   }
@@ -199,6 +260,18 @@ function applyStructuredContext(
     next.quantity = context.quantity;
   }
   return next;
+}
+
+function normalizeSearchText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function isYerbaMateSearch(value: string): boolean {
+  return /\byerbas?\s+mates?\b/.test(normalizeSearchText(value));
 }
 
 function buildTerminalResponse(

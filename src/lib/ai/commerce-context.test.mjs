@@ -3,6 +3,7 @@ import test from "node:test";
 import {
   createCommerceContext,
   detectTaxonomy,
+  isYerbaMateProduct,
   resolveContextualProductId,
   updateCommerceContext,
 } from "./commerce-context.ts";
@@ -20,6 +21,91 @@ test("detecta taxonomia comercial conocida", () => {
     category: "Bombillas",
     subcategory: "Acero",
   });
+});
+
+test("detecta categorías y subcategorías activas desde la taxonomía recibida", () => {
+  const categories = [
+    { id: "cat-food", name: "Alimentos Secos" },
+    { id: "cat-tools", name: "Accesorios" },
+  ];
+  const subcategories = [
+    { id: "sub-tea", name: "Té Verde", categoryId: "cat-food", categoryName: "Alimentos Secos" },
+    { id: "sub-stickers", name: "Stickers", categoryId: "cat-tools", categoryName: "Accesorios" },
+  ];
+
+  assert.deepEqual(detectTaxonomy("¿Tienen te verde?", categories, subcategories), {
+    category: "Alimentos Secos",
+    categoryId: "cat-food",
+    subcategory: "Té Verde",
+    subcategoryId: "sub-tea",
+  });
+  assert.deepEqual(detectTaxonomy("Busco accesorio.", categories, subcategories), {
+    category: "Accesorios",
+    categoryId: "cat-tools",
+  });
+
+  const context = updateCommerceContext({
+    message: "Busco stickers",
+    categories,
+    subcategories,
+    cart: [],
+  });
+  assert.equal(context.state, "SEARCH");
+  assert.equal(context.categoryId, "cat-tools");
+  assert.equal(context.subcategoryId, "sub-stickers");
+});
+
+test("no confunde yerba mate con la categoría de mates", () => {
+  const categories = [{ id: "cat-mates", name: "Mates" }];
+  const subcategories = [
+    { id: "sub-mate", name: "Mate", categoryId: "cat-mates", categoryName: "Mates" },
+  ];
+  const context = updateCommerceContext({
+    previous: {
+      ...createCommerceContext(),
+      categoryId: "cat-mates",
+      categoryName: "Mates",
+      subcategoryId: "sub-imperial",
+      subcategoryName: "Imperial",
+    },
+    message: "yerba mate tenes",
+    categories,
+    subcategories,
+    cart: [],
+  });
+
+  assert.equal(detectTaxonomy("yerba mate", categories, subcategories), undefined);
+  assert.equal(context.categoryName, undefined);
+  assert.equal(context.state, "SEARCH");
+});
+
+test("usa la categoría específica si existe para yerba mate", () => {
+  const categories = [
+    { id: "cat-mates", name: "Mates" },
+    { id: "cat-yerba", name: "Yerba Mate" },
+  ];
+
+  assert.deepEqual(detectTaxonomy("yerba mate tenes", categories), {
+    category: "Yerba Mate",
+    categoryId: "cat-yerba",
+  });
+});
+
+test("distingue la yerba para tomar de los recipientes yerberas", () => {
+  assert.equal(isYerbaMateProduct("Yerba Mate 500 g"), true);
+  assert.equal(isYerbaMateProduct("Don Julián Tradicional"), true);
+  assert.equal(isYerbaMateProduct("Mateite Compuesta"), true);
+  assert.equal(isYerbaMateProduct("Yerbera GAMUZA 250gr"), false);
+});
+
+test("una consulta de precio mayorista se clasifica para búsqueda", () => {
+  const context = updateCommerceContext({
+    message: "¿Cuál es el precio mayorista de las hierbas?",
+    cart: [],
+  });
+
+  assert.equal(context.state, "SEARCH");
+  assert.equal(context.purchaseIntent, "high");
 });
 
 test("resuelve referencias ordinales de forma deterministica", () => {

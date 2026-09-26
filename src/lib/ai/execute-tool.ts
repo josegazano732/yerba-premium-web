@@ -2,6 +2,8 @@ import { mapProductDetails, Product, ProductDetailsRow } from "@/data/products";
 import { supabase } from "@/lib/supabase";
 import { CartItem, cartProductItems, cartSubtotal } from "@/lib/cart";
 import { CartAction } from "@/lib/ai/types";
+import { isYerbaMateProduct, type CommerceTaxonomy } from "@/lib/ai/commerce-context";
+import { site } from "@/data/site";
 
 export type CommerceErrorCode =
   | "PRODUCT_NOT_FOUND"
@@ -44,8 +46,77 @@ type TaxonomySelection = {
   subcategory?: SubcategoryRow;
 };
 
+export type AiReferenceData = {
+  categories: CommerceTaxonomy[];
+  subcategories: CommerceTaxonomy[];
+  wholesaleCatalogs: Array<{
+    slug: string;
+    title: string;
+    categoryName: string;
+    description: string;
+  }>;
+};
+
 const PRODUCT_COLUMNS =
   "id,name,description,price,image,image_urls,category_name,unit_of_measure,stock,seasonal";
+
+export async function loadAiReferenceData(): Promise<AiReferenceData> {
+  if (!supabase) return { categories: [], subcategories: [], wholesaleCatalogs: [] };
+
+  const [categoriesResult, subcategoriesResult, catalogsResult] = await Promise.all([
+    supabase
+      .from("product_categories")
+      .select("id,name")
+      .eq("is_active", true)
+      .order("display_order"),
+    supabase
+      .from("product_subcategories")
+      .select("id,category_id,name")
+      .eq("is_active", true)
+      .order("display_order"),
+    supabase
+      .from("wholesale_catalogs")
+      .select("slug,title,category_name,description")
+      .eq("is_active", true)
+      .order("display_order")
+      .order("title"),
+  ]);
+
+  if (categoriesResult.error) console.error("[ai/reference] product_categories:", categoriesResult.error);
+  if (subcategoriesResult.error) console.error("[ai/reference] product_subcategories:", subcategoriesResult.error);
+  if (catalogsResult.error) console.error("[ai/reference] wholesale_catalogs:", catalogsResult.error);
+
+  const categories = (categoriesResult.data as CategoryRow[] | null) ?? [];
+  const categoryById = new Map(categories.map((category) => [category.id, category]));
+  const subcategories = ((subcategoriesResult.data as SubcategoryRow[] | null) ?? [])
+    .flatMap((subcategory) => {
+      const category = categoryById.get(subcategory.category_id);
+      return category
+        ? [{
+            id: subcategory.id,
+            name: subcategory.name,
+            categoryId: category.id,
+            categoryName: category.name,
+          }]
+        : [];
+    });
+
+  return {
+    categories: categories.map((category) => ({ id: category.id, name: category.name })),
+    subcategories,
+    wholesaleCatalogs: ((catalogsResult.data ?? []) as Array<{
+      slug: string;
+      title: string;
+      category_name: string;
+      description: string | null;
+    }>).map((catalog) => ({
+      slug: catalog.slug,
+      title: catalog.title,
+      categoryName: catalog.category_name,
+      description: catalog.description ?? "",
+    })),
+  };
+}
 
 export async function executeTool(
   toolName: string,
@@ -55,6 +126,8 @@ export async function executeTool(
   switch (toolName) {
     case "search_products":
       return searchProducts(args);
+    case "search_wholesale_products":
+      return searchWholesaleProducts(args);
     case "get_product":
       return getProduct(String(args.product_id ?? ""));
     case "check_stock":
@@ -84,12 +157,16 @@ async function searchProducts(args: Record<string, unknown>): Promise<ToolResult
     return commerceError("INTERNAL_ERROR", "El precio mínimo no puede superar al máximo.");
   }
 
+  const queryText = stringArg(args.query);
+  const limit = clampInteger(args.limit, 5, 1, 8);
+  if (queryText && isYerbaMateSearch(queryText)) {
+    return searchYerbaMateProducts(queryText, limit, minPrice, maxPrice);
+  }
+
   const taxonomy = await resolveTaxonomy(args);
   if ("result" in taxonomy) return taxonomy;
 
   const requestedProductId = stringArg(args.product_id);
-  const queryText = stringArg(args.query);
-  const limit = clampInteger(args.limit, 5, 1, 8);
   const attempts = buildSearchAttempts(taxonomy);
   let selectedAttempt = attempts[0];
   let rows: ProductDetailsRow[] = [];
@@ -166,6 +243,259 @@ async function searchProducts(args: Record<string, unknown>): Promise<ToolResult
       products: ranked.map(({ product, score }) => toToolProduct(product, score)),
     },
     products,
+  };
+}
+
+async function searchYerbaMateProducts(
+  queryText: string,
+  limit: number,
+  minPrice?: number,
+  maxPrice?: number
+): Promise<ToolResult> {
+  if (!supabase) return commerceError("DATABASE_UNAVAILABLE", "Base de datos no disponible.");
+
+  let detailsQuery = supabase
+    .from("product_details")
+    .select(PRODUCT_COLUMNS)
+    .gt("stock", 0)
+    .or("name.ilike.%yerba%,name.ilike.%mateite%,name.ilike.%don jul%");
+  if (minPrice !== undefined) detailsQuery = detailsQuery.gte("price", minPrice);
+  if (maxPrice !== undefined) detailsQuery = detailsQuery.lte("price", maxPrice);
+
+  const { data, error } = await detailsQuery.order("name").limit(250);
+  if (error) return commerceError("INTERNAL_ERROR", "No se pudieron consultar las yerbas disponibles.");
+
+  const matchingRows = ((data as ProductDetailsRow[] | null) ?? []).filter((row) => {
+    return isYerbaMateProduct(row.name ?? "");
+  });
+  if (matchingRows.length === 0) {
+    return {
+      result: {
+        success: true,
+        count: 0,
+        products: [],
+        matchLevel: "none",
+        message: "No encontramos yerba mate disponible en este momento.",
+      },
+      products: [],
+    };
+  }
+
+  const mapped = matchingRows
+    .map((row) => ({ row, product: mapProductDetails(row) }))
+    .filter((entry): entry is { row: ProductDetailsRow; product: Product } => entry.product !== null);
+  const productIds = new Set(mapped.map(({ product }) => product.id));
+  const { data: relationData, error: relationError } = await supabase
+    .from("products")
+    .select("id,category_id,subcategory_id")
+    .in("id", [...productIds]);
+  if (relationError) return commerceError("INTERNAL_ERROR", "No se pudo consultar la clasificación de las yerbas.");
+  const relationRows = (relationData as ProductRelationRow[] | null) ?? [];
+  const relations = new Map(
+    relationRows.map((relation) => [relation.id, relation])
+  );
+  const taxonomyMaps = await loadTaxonomyMaps(relations);
+  if ("result" in taxonomyMaps) return taxonomyMaps;
+
+  const ranked: Array<{ product: Product; score: number }> = mapped
+    .map(({ product }) => {
+      const relation = relations.get(product.id);
+      const category = relation ? taxonomyMaps.categories.get(relation.category_id) : undefined;
+      const subcategory = relation ? taxonomyMaps.subcategories.get(relation.subcategory_id) : undefined;
+      return {
+        product: {
+          ...product,
+          categoryId: category?.id,
+          category: category?.name ?? product.category,
+          subcategoryId: subcategory?.id,
+          subcategory: subcategory?.name,
+        },
+        score: scoreProduct(product, queryText, {}, minPrice, maxPrice),
+      };
+    })
+    .sort((left, right) => right.score - left.score || left.product.price - right.product.price)
+    .slice(0, limit);
+  const products = ranked.map(({ product }) => product);
+
+  return {
+    result: {
+      success: true,
+      count: products.length,
+      matchLevel: "product_text",
+      products: ranked.map(({ product, score }) => toToolProduct(product, score)),
+    },
+    products,
+  };
+}
+
+async function searchWholesaleProducts(args: Record<string, unknown>): Promise<ToolResult> {
+  if (!supabase) return commerceError("DATABASE_UNAVAILABLE", "Base de datos no disponible.");
+
+  const maxPrice = optionalFiniteNumber(args.maxPrice);
+  if (args.maxPrice !== undefined && maxPrice === undefined) {
+    return commerceError("INTERNAL_ERROR", "El rango de precio mayorista no es válido.");
+  }
+
+  const taxonomy = await resolveTaxonomy(args);
+  if ("result" in taxonomy) return taxonomy;
+
+  const catalogsResult = await supabase
+    .from("wholesale_catalogs")
+    .select("slug,title,category_name,description")
+    .eq("is_active", true)
+    .order("display_order")
+    .order("title");
+  if (catalogsResult.error) return commerceError("INTERNAL_ERROR", "No se pudieron consultar los catálogos mayoristas.");
+
+  const catalogs = (catalogsResult.data ?? []) as Array<{
+    slug: string;
+    title: string;
+    category_name: string;
+    description: string | null;
+  }>;
+  const catalogArg = stringArg(args.catalog);
+  const normalizedCatalogArg = catalogArg ? normalizeSearchText(catalogArg) : undefined;
+  const matchingCatalogs = normalizedCatalogArg
+    ? catalogs.filter((catalog) =>
+        [catalog.slug, catalog.title, catalog.category_name]
+          .some((value) => normalizeSearchText(value) === normalizedCatalogArg)
+      )
+    : catalogs;
+
+  if (catalogArg && matchingCatalogs.length === 0) {
+    return {
+      result: {
+        success: false,
+        error: {
+          code: "INVALID_TAXONOMY",
+          message: "No existe un catálogo mayorista activo con ese nombre.",
+        },
+        availableCatalogs: catalogs.map((catalog) => catalog.title),
+      },
+    };
+  }
+
+  const categoryNames = [...new Set(matchingCatalogs.map((catalog) => catalog.category_name))];
+  if (categoryNames.length === 0) {
+    return {
+      result: { success: true, count: 0, catalogs: [], products: [], message: "No hay catálogos mayoristas activos." },
+    };
+  }
+
+  const { data: detailsData, error: detailsError } = await supabase
+    .from("product_details")
+    .select(PRODUCT_COLUMNS)
+    .in("category_name", categoryNames)
+    .order("name")
+    .limit(250);
+  if (detailsError) return commerceError("INTERNAL_ERROR", "No se pudieron consultar los productos mayoristas.");
+
+  const details = ((detailsData as ProductDetailsRow[] | null) ?? [])
+    .map((row) => ({ row, product: mapProductDetails(row) }))
+    .filter((entry): entry is { row: ProductDetailsRow; product: Product } => entry.product !== null);
+  if (details.length === 0) {
+    return {
+      result: {
+        success: true,
+        count: 0,
+        catalogs: matchingCatalogs.map((catalog) => ({
+          title: catalog.title,
+          url: `${site.baseUrl}/catalogos#${catalog.slug}`,
+        })),
+        products: [],
+        message: "No encontramos productos en esos catálogos mayoristas.",
+      },
+    };
+  }
+
+  let relationsQuery = supabase
+    .from("products")
+    .select("id,category_id,subcategory_id")
+    .in("id", details.map(({ product }) => product.id));
+  if (taxonomy.category) relationsQuery = relationsQuery.eq("category_id", taxonomy.category.id);
+  if (taxonomy.subcategory) relationsQuery = relationsQuery.eq("subcategory_id", taxonomy.subcategory.id);
+  const { data: relationsData, error: relationsError } = await relationsQuery;
+  if (relationsError) return commerceError("INTERNAL_ERROR", "No se pudo validar la clasificación mayorista.");
+
+  const relations = new Map(
+    ((relationsData as ProductRelationRow[] | null) ?? []).map((relation) => [relation.id, relation])
+  );
+  const eligibleDetails = taxonomy.category || taxonomy.subcategory
+    ? details.filter(({ product }) => relations.has(product.id))
+    : details;
+  const taxonomyMaps = await loadTaxonomyMaps(relations);
+  if ("result" in taxonomyMaps) return taxonomyMaps;
+
+  const priceResult = eligibleDetails.length > 0
+    ? await supabase
+        .from("products")
+        .select("id,wholesale_calculated_price")
+        .in("id", eligibleDetails.map(({ product }) => product.id))
+    : { data: [], error: null };
+  if (priceResult.error) return commerceError("INTERNAL_ERROR", "No se pudieron consultar los precios mayoristas.");
+
+  const wholesalePrices = new Map(
+    ((priceResult.data ?? []) as Array<{ id: string; wholesale_calculated_price: number | string | null }>)
+      .map((row) => [row.id, row.wholesale_calculated_price])
+  );
+  const query = stringArg(args.query) ?? "";
+  const queryTokens = tokenize(query);
+  const candidates = eligibleDetails.flatMap(({ row, product }) => {
+    const rawPrice = wholesalePrices.get(product.id);
+    const basePrice = Number(rawPrice);
+    if (rawPrice === null || rawPrice === undefined || !Number.isFinite(basePrice) || basePrice < 0) return [];
+    const catalog = matchingCatalogs.find((entry) => entry.category_name === row.category_name);
+    if (!catalog) return [];
+
+    const relation = relations.get(product.id);
+    const category = relation ? taxonomyMaps.categories.get(relation.category_id) : undefined;
+    const subcategory = relation ? taxonomyMaps.subcategories.get(relation.subcategory_id) : undefined;
+    const isYerbaMate = normalizeSearchText(catalog.category_name).includes("yerba mate");
+    const isWeightProduct = ["gramos", "gramo", "gs", "g", "kg", "kilo", "kilos"]
+      .includes((product.weight ?? "").trim().toLowerCase());
+    const price = isYerbaMate ? basePrice * 10 : basePrice;
+    if (maxPrice !== undefined && price > maxPrice) return [];
+
+    const searchableText = normalizeSearchText(`${product.name} ${product.description} ${category?.name ?? product.category} ${subcategory?.name ?? ""}`);
+    const score = queryTokens.reduce((total, token) => total + (searchableText.includes(token) ? 1 : 0), 0);
+    return [{
+      score,
+      product: {
+        id: product.id,
+        name: product.name,
+        catalog: catalog.title,
+        category: category?.name ?? product.category,
+        subcategory: subcategory?.name ?? null,
+        price,
+        priceUnit: isYerbaMate ? "por pack de 10 unidades" : isWeightProduct ? "por kilo" : "por unidad",
+        stock: product.stock,
+        description: product.description,
+      },
+    }];
+  });
+
+  const limit = clampInteger(args.limit, 5, 1, 8);
+  const products = candidates
+    .sort((left, right) => right.score - left.score || left.product.price - right.product.price)
+    .slice(0, limit)
+    .map(({ product }) => product);
+
+  return {
+    result: {
+      success: true,
+      count: products.length,
+      catalogs: matchingCatalogs.map((catalog) => ({
+        title: catalog.title,
+        category: catalog.category_name,
+        description: catalog.description ?? "",
+        url: `${site.baseUrl}/catalogos#${catalog.slug}`,
+      })),
+      products,
+      priceSource: "wholesale_calculated_price",
+      message: products.length > 0
+        ? "Precios mayoristas reales. Indicá siempre la unidad informada y no los confundas con precios minoristas."
+        : "No encontramos productos mayoristas que coincidan con esos filtros.",
+    },
   };
 }
 
@@ -559,4 +889,17 @@ function tokenize(value: string): string[] {
     .toLowerCase()
     .split(/[^a-z0-9]+/)
     .filter((token) => token.length > 1);
+}
+
+function normalizeSearchText(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
+}
+
+function isYerbaMateSearch(value: string): boolean {
+  const normalized = normalizeSearchText(value);
+  return /\byerbas?\s+mates?\b/.test(normalized);
 }

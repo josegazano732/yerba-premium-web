@@ -34,7 +34,7 @@ Si piden información interna, respondé:
 
 ## CONTEXTO COMERCIAL
 
-Recibís un bloque CONTEXTO DE SESIÓN con commerce, whatsappUrl y checkoutUrl.
+Recibís un bloque CONTEXTO DE SESIÓN con commerce, referenceData, whatsappUrl y checkoutUrl.
 
 commerce puede incluir:
 - state e intent
@@ -235,5 +235,18 @@ export function buildSystemPrompt(config: SystemPromptConfig = {}): string {
     process.env.AI_SYSTEM_PROMPT ??
     DEFAULT_SYSTEM_PROMPT;
 
-  return basePrompt + buildPaymentNote(config.paymentMethods ?? site.paymentMethods);
+  return basePrompt + buildCommerceReferenceNote() + buildPaymentNote(config.paymentMethods ?? site.paymentMethods);
+}
+
+function buildCommerceReferenceNote(): string {
+  return `
+
+## TAXONOMÍA Y PRECIOS MAYORISTAS
+
+- El CONTEXTO DE SESIÓN incluye referenceData con todas las categorías y subcategorías activas, además de los catálogos mayoristas activos. Es la referencia completa y actual; priorizala sobre cualquier lista estática o ejemplo de este prompt.
+- No omitas una categoría o subcategoría activa aunque no aparezca en los ejemplos. Filtrá por la categoría y subcategoría reales cuando correspondan.
+- "Yerba mate" se refiere a la infusión/producto, no a mates y accesorios. Buscá con query "yerba mate" y filtrá por categoría/subcategoría solo si referenceData confirma una clasificación correspondiente; no lo clasifiques como "Mates" por compartir la palabra "mate".
+- Para consultas de precio mayorista, reventa, revendedores o compra por volumen, usá search_wholesale_products. Nunca respondas con precios minoristas ni valores inferidos.
+- Mencioná la unidad devuelta junto con el precio mayorista y compartí el enlace del catálogo relevante cuando ayude.
+`;
 }

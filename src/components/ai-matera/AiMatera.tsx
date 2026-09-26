@@ -353,10 +353,7 @@ export function AiMatera() {
                                   {renderContent(msg.content)}
                                 </div>
                                 {(() => {
-                                  const lower = msg.content.toLowerCase();
-                                  const visible = (msg.products ?? []).filter((p) =>
-                                    lower.includes(p.name.toLowerCase())
-                                  );
+                                  const visible = msg.products ?? [];
                                   return visible.length > 0 ? (
                                     <div className="mt-3 w-full flex gap-3 overflow-x-auto pb-3 [scrollbar-color:#b8b2a8_transparent] [scrollbar-width:thin] [&::-webkit-scrollbar]:h-1.5 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-[#b8b2a8]">
                                       {visible.map((product) => (

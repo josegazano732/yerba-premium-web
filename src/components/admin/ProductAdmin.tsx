@@ -26,6 +26,13 @@ type Subcategory = {
   name: string;
 };
 
+type WholesaleCatalog = {
+  id: string;
+  slug: string;
+  title: string;
+  category_name: string;
+};
+
 type AdminProduct = {
   id: string;
   name: string;
@@ -37,6 +44,7 @@ type AdminProduct = {
   category_name: string | null;
   subcategory_id: string | null;
   subcategory_name: string | null;
+  wholesale_catalog_id: string | null;
   unit_of_measure: string | null;
   stock: number | string | null;
   seasonal: boolean | null;
@@ -55,6 +63,7 @@ type ProductForm = {
   price: string;
   categoryId: string;
   subcategoryId: string;
+  wholesaleCatalogId: string;
   unitOfMeasure: string;
   stock: string;
   seasonal: boolean;
@@ -76,6 +85,7 @@ const emptyForm: ProductForm = {
   price: "",
   categoryId: "",
   subcategoryId: "",
+  wholesaleCatalogId: "",
   unitOfMeasure: UNIT_OPTIONS[0].value,
   stock: "0",
   seasonal: false,
@@ -101,6 +111,7 @@ export function ProductAdmin() {
   const [products, setProducts] = useState<AdminProduct[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [subcategories, setSubcategories] = useState<Subcategory[]>([]);
+  const [wholesaleCatalogs, setWholesaleCatalogs] = useState<WholesaleCatalog[]>([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -136,15 +147,16 @@ export function ProductAdmin() {
     if (!supabase) return;
     setLoading(true);
     setMessage("");
-    const [productsResult, categoriesResult, productRelationsResult, subcategoriesResult] = await Promise.all([
+    const [productsResult, categoriesResult, productRelationsResult, subcategoriesResult, wholesaleCatalogsResult] = await Promise.all([
       supabase.from("product_details").select("id,name,description,price,image,image_urls,category_id,category_name,unit_of_measure,stock,seasonal,cost,markup_percentage,updated_at").order("updated_at", { ascending: false }),
       supabase.from("product_categories").select("id,name").eq("is_active", true).order("display_order"),
-      supabase.from("products").select("id,subcategory_id,wholesale_price_mode,wholesale_price,wholesale_cost_percentage,wholesale_calculated_price"),
-      supabase.from("product_subcategories").select("id,category_id,name").eq("is_active", true).order("display_order").order("name")
+      supabase.from("products").select("id,subcategory_id,wholesale_catalog_id,wholesale_price_mode,wholesale_price,wholesale_cost_percentage,wholesale_calculated_price"),
+      supabase.from("product_subcategories").select("id,category_id,name").eq("is_active", true).order("display_order").order("name"),
+      supabase.from("wholesale_catalogs").select("id,slug,title,category_name").eq("is_active", true).order("display_order").order("title")
     ]);
     setLoading(false);
-    if (productsResult.error || categoriesResult.error || productRelationsResult.error || subcategoriesResult.error) {
-      setMessage(productsResult.error?.message ?? categoriesResult.error?.message ?? productRelationsResult.error?.message ?? subcategoriesResult.error?.message ?? "No se pudo cargar el catálogo.");
+    if (productsResult.error || categoriesResult.error || productRelationsResult.error || subcategoriesResult.error || wholesaleCatalogsResult.error) {
+      setMessage(productsResult.error?.message ?? categoriesResult.error?.message ?? productRelationsResult.error?.message ?? subcategoriesResult.error?.message ?? wholesaleCatalogsResult.error?.message ?? "No se pudo cargar el catálogo.");
       return;
     }
     const nextSubcategories = (subcategoriesResult.data as Subcategory[] | null) ?? [];
@@ -153,13 +165,14 @@ export function ProductAdmin() {
       ((productRelationsResult.data as Array<{
         id: string;
         subcategory_id: string | null;
+        wholesale_catalog_id: string | null;
         wholesale_price_mode: WholesalePricingMode;
         wholesale_price: number | string | null;
         wholesale_cost_percentage: number | string | null;
         wholesale_calculated_price: number | string | null;
       }> | null) ?? []).map((product) => [product.id, product])
     );
-    const detailedProducts = (productsResult.data as Omit<AdminProduct, "subcategory_id" | "subcategory_name" | "wholesale_price_mode" | "wholesale_price" | "wholesale_cost_percentage" | "wholesale_calculated_price">[] | null) ?? [];
+    const detailedProducts = (productsResult.data as Omit<AdminProduct, "subcategory_id" | "subcategory_name" | "wholesale_catalog_id" | "wholesale_price_mode" | "wholesale_price" | "wholesale_cost_percentage" | "wholesale_calculated_price">[] | null) ?? [];
     if (detailedProducts.some((product) => !productSettingsById.has(product.id))) {
       setMessage("No se pudieron cargar los precios mayoristas de todos los productos.");
       return;
@@ -172,6 +185,7 @@ export function ProductAdmin() {
             ...product,
             subcategory_id: subcategoryId,
             subcategory_name: subcategoryId ? subcategoryById.get(subcategoryId) ?? null : null,
+            wholesale_catalog_id: settings?.wholesale_catalog_id ?? null,
             wholesale_price_mode: settings?.wholesale_price_mode ?? "retail",
             wholesale_price: settings?.wholesale_price ?? null,
             wholesale_cost_percentage: settings?.wholesale_cost_percentage ?? null,
@@ -181,6 +195,7 @@ export function ProductAdmin() {
     );
     setCategories((categoriesResult.data as Category[] | null) ?? []);
     setSubcategories(nextSubcategories);
+    setWholesaleCatalogs((wholesaleCatalogsResult.data as WholesaleCatalog[] | null) ?? []);
   }
 
   async function signIn(event: FormEvent<HTMLFormElement>) {
@@ -199,7 +214,8 @@ export function ProductAdmin() {
     setForm({
       ...emptyForm,
       categoryId,
-      subcategoryId: subcategories.find((subcategory) => subcategory.category_id === categoryId)?.id ?? ""
+      subcategoryId: subcategories.find((subcategory) => subcategory.category_id === categoryId)?.id ?? "",
+      wholesaleCatalogId: ""
     });
     setProductImages([]);
     setExistingImages([]);
@@ -215,6 +231,7 @@ export function ProductAdmin() {
       price: String(product.price ?? ""),
       categoryId: product.category_id ?? categories[0]?.id ?? "",
       subcategoryId: product.subcategory_id ?? "",
+      wholesaleCatalogId: product.wholesale_catalog_id ?? "",
       unitOfMeasure: normalizeUnit(product.unit_of_measure),
       stock: String(product.stock ?? 0),
       seasonal: Boolean(product.seasonal),
@@ -306,6 +323,7 @@ export function ProductAdmin() {
       image_urls: imageUrls.length > 0 ? imageUrls : null,
       category_id: form.categoryId,
       subcategory_id: form.subcategoryId,
+      wholesale_catalog_id: form.wholesaleCatalogId || null,
       unit_of_measure: form.unitOfMeasure,
       stock: Number(form.stock),
       seasonal: form.seasonal,
@@ -348,6 +366,11 @@ export function ProductAdmin() {
     `${product.name} ${product.category_name ?? ""} ${product.subcategory_name ?? ""}`.toLowerCase().includes(deferredQuery)
   );
   const availableSubcategories = subcategories.filter((subcategory) => subcategory.category_id === form.categoryId);
+  const selectedCategory = categories.find((category) => category.id === form.categoryId);
+  const isYerbaMateCategory = normalizeCategoryName(selectedCategory?.name ?? "") === "yerba mate";
+  const availableWholesaleCatalogs = isYerbaMateCategory
+    ? wholesaleCatalogs.filter((catalog) => normalizeCategoryName(catalog.category_name) === "yerba mate")
+    : [];
   const wholesalePricePreview = calculateWholesalePrice({
     mode: form.wholesalePriceMode,
     retailPrice: form.price,
@@ -501,7 +524,8 @@ export function ProductAdmin() {
                               setForm({
                                 ...form,
                                 categoryId,
-                                subcategoryId: subcategories.find((subcategory) => subcategory.category_id === categoryId)?.id ?? ""
+                                subcategoryId: subcategories.find((subcategory) => subcategory.category_id === categoryId)?.id ?? "",
+                                wholesaleCatalogId: ""
                               });
                             }}
                             className="admin-input"
@@ -517,6 +541,30 @@ export function ProductAdmin() {
                         </AdminField>
                       </div>
                       <p className="mt-3 text-xs leading-5 text-muted">Las subcategorías se administran desde la pestaña Parámetros y dependen de la categoría seleccionada.</p>
+                      {isYerbaMateCategory ? (
+                        <div className="mt-4">
+                          <AdminField label="Catálogo mayorista de Yerba Mate">
+                            <select
+                              value={form.wholesaleCatalogId}
+                              onChange={(event) => setForm({ ...form, wholesaleCatalogId: event.target.value })}
+                              className="admin-input"
+                            >
+                              <option value="">No incluir en los catálogos de Yerba Mate</option>
+                              {availableWholesaleCatalogs.map((catalog) => (
+                                <option key={catalog.id} value={catalog.id}>{catalog.title} ({catalog.slug})</option>
+                              ))}
+                            </select>
+                          </AdminField>
+                          <p className="mt-2 text-xs leading-5 text-muted">
+                            Elegí el catálogo en el que debe aparecer este producto. Los catálogos se administran desde la pestaña Mayorista.
+                          </p>
+                          {availableWholesaleCatalogs.length === 0 ? (
+                            <p role="status" className="mt-2 text-xs font-semibold text-amber-800">
+                              No hay catálogos activos asociados a Yerba Mate. Configuralos en la pestaña Mayorista.
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : null}
                     </ProductFormSection>
 
                     <ProductFormSection icon={<PackageCheck size={18} />} eyebrow="Inventario" title="Precio y disponibilidad">
@@ -646,6 +694,15 @@ function ProductFormSection({ icon, eyebrow, title, children }: Readonly<{ icon:
 function normalizeUnit(value: string | null) {
   const current = (value ?? "").trim().toLowerCase();
   return current || UNIT_OPTIONS[0].value;
+}
+
+function normalizeCategoryName(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ");
 }
 
 function unitOptionsFor(value: string) {

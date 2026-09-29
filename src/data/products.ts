@@ -11,6 +11,7 @@ export type Product = {
   categoryId?: string;
   subcategory?: string;
   subcategoryId?: string;
+  wholesaleCatalogId?: string;
   weight?: string;
   stock: number;
   featured?: boolean;

@@ -251,7 +251,7 @@ export function WholesaleCatalog() {
         const wholesalePricesResult = mappedProducts.length > 0
           ? await db
               .from("products")
-              .select("id,wholesale_calculated_price")
+              .select("id,wholesale_catalog_id,wholesale_calculated_price")
               .in("id", mappedProducts.map((product) => product.id))
           : null;
 
@@ -262,15 +262,19 @@ export function WholesaleCatalog() {
           return;
         }
 
-        const wholesalePriceById = new Map(
-          ((wholesalePricesResult?.data ?? []) as Array<{ id: string; wholesale_calculated_price: number | string | null }>)
-            .map((row) => [row.id, row.wholesale_calculated_price])
+        const wholesaleSettingsById = new Map(
+          ((wholesalePricesResult?.data ?? []) as Array<{
+            id: string;
+            wholesale_catalog_id: string | null;
+            wholesale_calculated_price: number | string | null;
+          }>).map((row) => [row.id, row])
         );
-        const resolvedProducts = mappedProducts.map((product) => {
-          const wholesalePrice = wholesalePriceById.get(product.id);
+        const resolvedProducts: Array<Product | null> = mappedProducts.map((product) => {
+          const settings = wholesaleSettingsById.get(product.id);
+          const wholesalePrice = settings?.wholesale_calculated_price;
           const price = Number(wholesalePrice);
           return wholesalePrice !== null && wholesalePrice !== undefined && Number.isFinite(price)
-            ? { ...product, price }
+            ? { ...product, price, wholesaleCatalogId: settings?.wholesale_catalog_id ?? undefined }
             : null;
         });
         if (resolvedProducts.some((product) => product === null)) {
@@ -309,6 +313,9 @@ export function WholesaleCatalog() {
     const search = query.trim().toLowerCase();
     const filtered = products
       .filter((product) => product.category === activeCatalog.categoryName)
+      .filter((product) =>
+        !isYerbaMateCatalog(activeCatalog, products) || product.wholesaleCatalogId === activeCatalog.id
+      )
       .filter((product) => product.name.toLowerCase().includes(search));
     return [...filtered.filter(isSoldByWeight), ...filtered.filter((p) => !isSoldByWeight(p))];
   }, [activeCatalog, products, query]);

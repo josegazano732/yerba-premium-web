@@ -12,6 +12,7 @@ export type CheckoutPreferenceItem = {
 export type CheckoutPreferenceInput = {
   orderId: string;
   items: CheckoutPreferenceItem[];
+  shippingCost: number;
   customerEmail?: string | null;
 };
 
@@ -35,16 +36,27 @@ export async function createCheckoutPreference(
 
   const siteUrl = getSiteUrl();
   const preference = new Preference(client);
+  const items = input.items.map((item) => ({
+    id: item.id,
+    title: item.title,
+    quantity: item.quantity,
+    unit_price: item.unit_price,
+    currency_id: "ARS",
+  }));
+
+  if (input.shippingCost > 0) {
+    items.push({
+      id: "shipping",
+      title: "Envío",
+      quantity: 1,
+      unit_price: input.shippingCost,
+      currency_id: "ARS",
+    });
+  }
 
   const response = await preference.create({
     body: {
-      items: input.items.map((item) => ({
-        id: item.id,
-        title: item.title,
-        quantity: item.quantity,
-        unit_price: item.unit_price,
-        currency_id: "ARS",
-      })),
+      items,
       external_reference: input.orderId,
       auto_return: "approved",
       back_urls: {

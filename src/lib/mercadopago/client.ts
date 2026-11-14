@@ -6,7 +6,7 @@ import { MercadoPagoConfig } from "mercadopago";
  * Solo debe usarse desde el servidor.
  */
 export function getMercadoPagoClient(): MercadoPagoConfig | null {
-  const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN;
+  const accessToken = process.env.MERCADOPAGO_ACCESS_TOKEN?.trim();
   if (!accessToken) return null;
 
   return new MercadoPagoConfig({

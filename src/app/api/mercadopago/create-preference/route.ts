@@ -60,6 +60,7 @@ export async function POST(request: Request) {
     const { id: preferenceId, initPoint } = await createCheckoutPreference({
       orderId: order.id,
       customerEmail: order.customerEmail,
+      shippingCost: order.shippingCost,
       items: [...productItems, ...comboItems],
     });
 
@@ -73,6 +74,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ preferenceId, initPoint, orderId }, { status: 200 });
   } catch (error) {
     console.error("[mercadopago] Error al crear la Preference:", error);
+    const providerStatus =
+      typeof error === "object" && error !== null && "status" in error
+        ? error.status
+        : undefined;
+    const missingAccessToken =
+      error instanceof Error &&
+      error.message === "MERCADOPAGO_ACCESS_TOKEN no está configurado.";
+
+    if (providerStatus === 401 || missingAccessToken) {
+      return NextResponse.json(
+        {
+          error:
+            "No se pudo validar la configuración de Mercado Pago. Revisá MERCADOPAGO_ACCESS_TOKEN en Vercel y volvé a desplegar.",
+        },
+        { status: 503 }
+      );
+    }
+
     return NextResponse.json({ error: "No se pudo iniciar el pago." }, { status: 500 });
   }
 }

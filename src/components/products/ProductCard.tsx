@@ -1,7 +1,8 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, useMotionValue, useReducedMotion, useSpring } from "framer-motion";
 import { ShoppingBag } from "lucide-react";
+import { type MouseEvent } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Product } from "@/data/products";
@@ -29,6 +30,27 @@ const imageFormatClasses = {
 
 export function ProductCard({ product, onAdd, onSelect, imageFormat = "standard" }: Readonly<ProductCardProps>) {
   const secondaryImage = product.images && product.images.length > 1 ? product.images[1] : null;
+  const reduceMotion = useReducedMotion();
+
+  const rotateX = useMotionValue(0);
+  const rotateY = useMotionValue(0);
+  const springRotateX = useSpring(rotateX, { stiffness: 180, damping: 20, mass: 0.4 });
+  const springRotateY = useSpring(rotateY, { stiffness: 180, damping: 20, mass: 0.4 });
+
+  function handleMouseMove(event: MouseEvent<HTMLElement>) {
+    if (reduceMotion) return;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const x = (event.clientX - rect.left) / rect.width;
+    const y = (event.clientY - rect.top) / rect.height;
+    const maxTilt = 6;
+    rotateY.set((x - 0.5) * 2 * maxTilt);
+    rotateX.set((0.5 - y) * 2 * maxTilt);
+  }
+
+  function handleMouseLeave() {
+    rotateX.set(0);
+    rotateY.set(0);
+  }
 
   const cardInner = (
     <>
@@ -75,9 +97,16 @@ export function ProductCard({ product, onAdd, onSelect, imageFormat = "standard"
 
   return (
     <motion.article
-      whileHover={{ y: -5 }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      whileHover={reduceMotion ? undefined : { y: -5 }}
       transition={{ duration: 0.25 }}
-      className="group flex flex-col rounded-[8px] border border-[#d9d4c8] bg-[#fffdf8] p-2 shadow-[0_10px_35px_rgba(37,48,27,0.06)] transition hover:border-primary/30 hover:shadow-[0_18px_45px_rgba(37,48,27,0.12)]"
+      style={{
+        rotateX: springRotateX,
+        rotateY: springRotateY,
+        transformPerspective: 600
+      }}
+      className="group flex flex-col rounded-[8px] border border-[#d9d4c8] bg-[#fffdf8]/70 p-2 shadow-[0_10px_35px_rgba(37,48,27,0.06)] backdrop-blur-sm transition hover:border-primary/30 hover:shadow-[0_18px_45px_rgba(37,48,27,0.12)]"
     >
       {onSelect ? (
         <button

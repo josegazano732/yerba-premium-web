@@ -85,7 +85,8 @@ Crea un pedido en estado `pending`.
 
 - **Body:** `{ orderId }` (UUID).
 - **Flujo:** si el pedido ya tiene `mercadopago_preference_id`, intenta reutilizarla (spec §13);
-  si no, crea una `Preference` nueva y la persiste en la orden.
+  si no, crea una `Preference` nueva con los productos, combos y el costo de envío del pedido,
+  y la persiste en la orden.
 - **Respuesta 200:** `{ preferenceId, initPoint, orderId }`.
 
 ### `POST /api/webhooks/mercadopago`

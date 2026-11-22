@@ -10,7 +10,6 @@ function buildNavItems(enabledKitBuilder: boolean) {
     { href: "/productos", label: "Productos", external: false },
     { href: "/catalogos", label: "Catalogos", external: false },
     { href: "/donde-comprar", label: "Donde Comprar", external: false },
-    { href: "/sobre-nosotros", label: "Sobre Nosotros", external: false },
   ];
 
   if (enabledKitBuilder) {

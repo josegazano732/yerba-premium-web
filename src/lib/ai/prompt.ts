@@ -223,8 +223,8 @@ export function buildPaymentNote(paymentMethods: string[] = site.paymentMethods)
 ${methods}
 
 - Respondé únicamente con esta lista confirmada.
-- El pago online se completa mediante Mercado Pago desde el checkout.
-- Las cuotas y promociones disponibles se muestran al momento de pagar en Mercado Pago.
+- El pago online se completa mediante Ualá desde el checkout.
+- Las cuotas y promociones disponibles se muestran al momento de pagar en Ualá.
 - No inventes descuentos, cuotas ni condiciones.
 `;
 }

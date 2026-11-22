@@ -41,7 +41,7 @@ type OrderRow = {
   payment_provider: string;
   payment_status: string;
   payment_id: string | null;
-  mercadopago_preference_id: string | null;
+  uala_order_uuid: string | null;
   shipping_label: string | null;
   shipping_eta: string | null;
   created_at: string;
@@ -82,7 +82,7 @@ export async function GET(request: Request) {
   const { data: orders, error: ordersError } = await supabaseServer
     .from("orders")
     .select(
-      "id, customer_name, customer_email, customer_phone, shipping_address, shipping_city, shipping_province, shipping_postal_code, subtotal, shipping_cost, total, status, payment_provider, payment_status, payment_id, mercadopago_preference_id, shipping_label, shipping_eta, created_at"
+      "id, customer_name, customer_email, customer_phone, shipping_address, shipping_city, shipping_province, shipping_postal_code, subtotal, shipping_cost, total, status, payment_provider, payment_status, payment_id, uala_order_uuid, shipping_label, shipping_eta, created_at"
     )
     .order("created_at", { ascending: false });
 
@@ -173,7 +173,7 @@ export async function GET(request: Request) {
     paymentProvider: order.payment_provider,
     paymentStatus: order.payment_status,
     paymentId: order.payment_id,
-    mercadopagoPreferenceId: order.mercadopago_preference_id,
+    ualaOrderUuid: order.uala_order_uuid,
     shippingLabel: order.shipping_label,
     shippingEta: order.shipping_eta,
     createdAt: order.created_at,

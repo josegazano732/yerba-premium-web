@@ -18,7 +18,6 @@ import { MobileMenu } from "./MobileMenu";
 
 const navItems = [
   { href: "/donde-comprar", label: "Donde Comprar", external: false },
-  { href: "/sobre-nosotros", label: "Sobre Nosotros", external: false },
   { href: "/catalogos", label: "Catalogos", external: false }
 ];
 
@@ -56,7 +55,7 @@ const announcements = [
   {
     icon: CreditCard,
     eyebrow: "Compra simple",
-    text: "Pagá con tarjeta o Mercado Pago"
+    text: "Pagá con tarjeta o Ualá"
   },
   {
     icon: MapPin,

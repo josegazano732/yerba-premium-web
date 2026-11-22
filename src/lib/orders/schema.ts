@@ -36,7 +36,7 @@ export const checkoutFormSchema = customerSchema.extend({
   shippingMethodId: z.string().trim().min(1).max(64),
 });
 
-export const createPreferenceSchema = z.object({
+export const createCheckoutSchema = z.object({
   orderId: z.string().uuid(),
 });
 

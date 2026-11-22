@@ -6,7 +6,7 @@ import { site } from "@/data/site";
 export const metadata: Metadata = {
   title: "Finalizar compra",
   description:
-    "Completá tus datos y elegí el envío para pagar con Mercado Pago de forma segura. Envíos a todo el país.",
+    "Completá tus datos y elegí el envío para pagar con Ualá de forma segura. Envíos a todo el país.",
   robots: { index: false, follow: false },
   alternates: { canonical: `${site.baseUrl}/checkout` }
 };

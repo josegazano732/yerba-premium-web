@@ -55,7 +55,7 @@ type AdminOrder = {
   paymentProvider: string;
   paymentStatus: string;
   paymentId: string | null;
-  mercadopagoPreferenceId: string | null;
+  ualaOrderUuid: string | null;
   shippingLabel: string | null;
   shippingEta: string | null;
   createdAt: string;
@@ -414,7 +414,7 @@ export function OrderAdmin() {
                 <section>
                   <h2 className="text-xs font-bold uppercase tracking-[0.14em] text-muted">Pago</h2>
                   <div className="mt-3 space-y-2 text-sm text-muted">
-                    <p className="flex items-center gap-2"><CreditCard size={16} /> {selected.paymentProvider === "mercadopago" ? "Mercado Pago" : selected.paymentProvider}</p>
+                    <p className="flex items-center gap-2"><CreditCard size={16} /> {selected.paymentProvider === "mercadopago" ? "Mercado Pago" : selected.paymentProvider === "uala" ? "Ualá" : selected.paymentProvider}</p>
                     {selected.paymentId ? <p className="break-all">ID de pago: {selected.paymentId}</p> : null}
                   </div>
                 </section>
@@ -440,7 +440,7 @@ export function OrderAdmin() {
                         <ChevronDown size={16} className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-muted" />
                       </span>
                     </label>
-                    <p className="text-xs leading-5 text-muted">El stock se descuenta automáticamente cuando Mercado Pago confirma el pago (webhook).</p>
+                    <p className="text-xs leading-5 text-muted">El stock se descuenta automáticamente cuando Ualá confirma el pago (webhook).</p>
                     <button type="button" onClick={() => void saveStatus()} disabled={saving} className="inline-flex h-11 w-full items-center justify-center gap-2 bg-[#20341d] px-5 text-sm font-bold text-white transition hover:bg-primary disabled:opacity-60">
                       {saving ? <LoaderCircle size={18} className="animate-spin" /> : <CheckCircle2 size={18} />} {saving ? "Guardando..." : "Guardar cambios"}
                     </button>

@@ -165,22 +165,22 @@ export function CheckoutForm() {
         throw new Error(orderData.error ?? "No se pudo crear el pedido.");
       }
 
-      const preferenceResponse = await fetch("/api/mercadopago/create-preference", {
+      const preferenceResponse = await fetch("/api/uala/create-checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderId: orderData.orderId }),
       });
 
       const preferenceData = (await preferenceResponse.json().catch(() => ({}))) as {
-        initPoint?: string;
+        checkoutLink?: string;
         error?: string;
       };
 
-      if (!preferenceResponse.ok || !preferenceData.initPoint) {
+      if (!preferenceResponse.ok || !preferenceData.checkoutLink) {
         throw new Error(preferenceData.error ?? "No se pudo iniciar el pago.");
       }
 
-      window.location.href = preferenceData.initPoint;
+      window.location.href = preferenceData.checkoutLink;
     } catch (error) {
       setServerError(error instanceof Error ? error.message : "Ocurrió un error inesperado.");
       setSubmitting(false);
@@ -214,7 +214,7 @@ export function CheckoutForm() {
       <h1 className="font-serif text-[1.75rem] font-semibold uppercase leading-tight tracking-[0.045em] text-[#20341d] sm:text-4xl sm:tracking-[0.06em]">
         Finalizar compra
       </h1>
-      <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">Completá tus datos y elegí el envío para pagar con Mercado Pago.</p>
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-muted">Completá tus datos y elegí el envío para pagar con Ualá.</p>
 
       <form id="checkout-form" noValidate onSubmit={handleSubmit(onSubmit, onInvalid)} className="mt-7 grid gap-6 sm:mt-10 sm:gap-8 lg:grid-cols-[minmax(0,1fr)_24rem] lg:gap-10">
         <div className="space-y-5 sm:space-y-6">
@@ -372,7 +372,7 @@ export function CheckoutForm() {
             className="mt-6 hidden h-12 w-full items-center justify-center gap-2 rounded-full bg-cta text-sm font-bold text-white transition hover:bg-cta-hover focus:outline-none focus:ring-2 focus:ring-cta focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60 lg:flex"
           >
             {submitting ? <LoaderCircle size={18} className="animate-spin" /> : <Lock size={18} />}
-            {submitting ? "Creando tu pedido…" : "Pagar con Mercado Pago"}
+            {submitting ? "Creando tu pedido…" : "Pagar con Ualá"}
           </button>
 
           <p className="mt-4 flex items-center justify-center gap-2 text-center text-xs leading-5 text-muted">

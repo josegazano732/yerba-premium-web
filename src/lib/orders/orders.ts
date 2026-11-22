@@ -41,7 +41,7 @@ export type StoredOrder = CalculatedOrder & {
   status: string;
   paymentStatus: string;
   paymentId: string | null;
-  mercadopagoPreferenceId: string | null;
+  ualaOrderUuid: string | null;
   customerName: string;
   customerEmail: string;
   customerPhone: string;
@@ -330,7 +330,7 @@ export async function createOrder(input: CreateOrderInput): Promise<StoredOrder>
       shipping_cost: calculated.shippingCost,
       total: calculated.total,
       status: "pending",
-      payment_provider: "mercadopago",
+      payment_provider: "uala",
       payment_status: "pending",
     })
     .select("id")
@@ -405,7 +405,7 @@ export async function createOrder(input: CreateOrderInput): Promise<StoredOrder>
     status: "pending",
     paymentStatus: "pending",
     paymentId: null,
-    mercadopagoPreferenceId: null,
+    ualaOrderUuid: null,
     customerName: customer.name,
     customerEmail: customer.email,
     customerPhone: customer.phone,
@@ -423,7 +423,7 @@ export async function getOrderById(orderId: string): Promise<StoredOrder | null>
   const { data: order, error } = await db
     .from("orders")
     .select(
-      "id, customer_name, customer_email, customer_phone, shipping_address, shipping_city, shipping_province, shipping_postal_code, subtotal, shipping_cost, total, status, payment_status, payment_id, mercadopago_preference_id, created_at"
+      "id, customer_name, customer_email, customer_phone, shipping_address, shipping_city, shipping_province, shipping_postal_code, subtotal, shipping_cost, total, status, payment_status, payment_id, uala_order_uuid, created_at"
     )
     .eq("id", orderId)
     .single();
@@ -486,9 +486,7 @@ export async function getOrderById(orderId: string): Promise<StoredOrder | null>
     status: String(order.status ?? "pending"),
     paymentStatus: String(order.payment_status ?? "pending"),
     paymentId: order.payment_id ? String(order.payment_id) : null,
-    mercadopagoPreferenceId: order.mercadopago_preference_id
-      ? String(order.mercadopago_preference_id)
-      : null,
+    ualaOrderUuid: order.uala_order_uuid ? String(order.uala_order_uuid) : null,
     customerName: String(order.customer_name ?? ""),
     customerEmail: String(order.customer_email ?? ""),
     customerPhone: String(order.customer_phone ?? ""),

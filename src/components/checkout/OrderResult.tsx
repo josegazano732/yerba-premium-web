@@ -228,7 +228,7 @@ export function OrderResult({ variant }: Readonly<{ variant: OrderResultVariant 
           Esto puede tardar unos segundos. No cierres esta ventana.
         </div>
         <p className="mt-3 text-sm leading-6 text-muted">
-          Cuando Mercado Pago confirme la operación, actualizaremos esta página automáticamente.
+          Cuando Ualá confirme la operación, actualizaremos esta página automáticamente.
         </p>
       </ResultShell>
     );

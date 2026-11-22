@@ -31,10 +31,12 @@ declare module "lucide-react" {
   export const Menu: LucideIcon;
   export const Minus: LucideIcon;
   export const Music2: LucideIcon;
+  export const Package: LucideIcon;
   export const PackageCheck: LucideIcon;
   export const Phone: LucideIcon;
   export const Plus: LucideIcon;
   export const Search: LucideIcon;
+  export const SearchX: LucideIcon;
   export const ShieldCheck: LucideIcon;
   export const ShoppingBag: LucideIcon;
   export const SlidersHorizontal: LucideIcon;

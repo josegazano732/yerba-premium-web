@@ -23,12 +23,11 @@ export function KitBuilderModule() {
     <KitBuilderStateProvider>
       <div className="grid gap-6">
         <KitBuilderToolbar />
-        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <KitBuilderScene />
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)]">
+
           <KitBuilderCatalog />
-          <div className="grid gap-6">
-            <KitBuilderScene />
-            <KitBuilderSummary />
-          </div>
+          <KitBuilderSummary />
         </div>
       </div>
     </KitBuilderStateProvider>

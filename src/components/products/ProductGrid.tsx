@@ -1,7 +1,7 @@
 "use client";
 
 import { AnimatePresence, motion } from "framer-motion";
-import { Banknote, ChevronDown, CreditCard, Filter, Landmark, Minus, Phone, Plus, Search, ShoppingBag, SlidersHorizontal, Truck, X } from "lucide-react";
+import { Banknote, ChevronDown, CreditCard, Filter, Landmark, Minus, Plus, Search, ShoppingBag, SlidersHorizontal, Truck, X } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { startTransition, useDeferredValue, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
@@ -347,33 +347,6 @@ export function ProductGrid({
   function addToCart(product: Product, quantity = 1) {
     cartAdd(product, quantity);
     setAddedProduct(product);
-  }
-
-  function buildWhatsappLink() {
-    const lines = cart.map((item, index) =>
-      `${index + 1}) ${cartItemName(item)}\n   ${item.quantity} x ${currency.format(cartItemUnitPrice(item))} = ${currency.format(cartItemLineTotal(item))}`
-    );
-
-    const message = [
-      "Hola! Quiero hacer este pedido:",
-      "",
-      ...lines,
-      "",
-      `Subtotal: ${currency.format(subtotal)}`,
-      ...(selectedQuote
-        ? [
-            `Envio (${selectedQuote.label}${quotedPostalCode ? ` - CP ${quotedPostalCode}` : ""}): ${shippingCost === 0 ? "a confirmar / bonificado" : currency.format(shippingCost)}`
-          ]
-        : []),
-      `Total: ${currency.format(orderTotal)}`,
-      "",
-      "Formas de pago:",
-      ...site.paymentMethods.map((method) => `- ${method}`),
-      "",
-      "Me confirman disponibilidad y el costo de envio?"
-    ].join("\n");
-
-    return `https://wa.me/${site.whatsappNumber}?text=${encodeURIComponent(message)}`;
   }
 
   return (
@@ -948,7 +921,6 @@ export function ProductGrid({
                   <Link href="/checkout" className="mt-4 flex h-12 w-full items-center justify-center gap-2 rounded-full bg-cta text-sm font-bold text-white transition hover:bg-cta-hover focus:outline-none focus:ring-2 focus:ring-cta focus:ring-offset-2">
                     Finalizar compra
                   </Link>
-                  <a href={buildWhatsappLink()} target="_blank" rel="noopener noreferrer" className="mt-3 flex h-11 w-full items-center justify-center gap-2 rounded-full border border-[#d7d2c7] text-sm font-bold text-[#20341d] transition hover:border-primary"><Phone size={18} /> Comprar por WhatsApp</a>
                   <button type="button" onClick={() => setIsCartOpen(false)} className="mt-3 w-full text-xs font-semibold text-muted underline underline-offset-4 transition hover:text-[#20341d]">
                     Ver más productos
                   </button>
